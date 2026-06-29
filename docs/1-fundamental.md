@@ -50,3 +50,85 @@ fmt.Println(a, b, c, d)
 | `uint` | `uint32` or `uint64` | Platform-dependent; at least 32-bit |
 
 > **Note:** The size of `int` and `uint` depends on the architecture — 32-bit on 32-bit systems, 64-bit on 64-bit systems. They are the most efficient integer types for the target platform.
+
+### Boolean Types
+
+A `bool` type represents a boolean value — either `true` or `false`.
+
+```go
+var trueConstant bool = true
+var falseConstant bool = false
+
+fmt.Println(trueConstant)   // true
+fmt.Println(falseConstant)  // false
+fmt.Println(1 == 1)         // true
+fmt.Println(1 != 1)         // false
+```
+
+### String Types
+
+A `string` is a sequence of bytes. Strings are immutable in Go.
+
+```go
+var str1 string = "Hello"
+
+fmt.Println(str1)               // Hello
+fmt.Println(len(str1))          // 5
+fmt.Println(str1[0])            // 72 (byte value, not char)
+```
+
+> **Note:** Indexing a string returns a byte value, not a character. For Unicode characters, use `rune`.
+
+### Variable Declaration
+
+Go provides several ways to declare variables.
+
+#### var
+
+Explicit declaration with type or inferred type.
+
+```go
+var a int8 = 127
+var name = "Go"  // type inferred
+```
+
+#### const
+
+Immutable values. Cannot be reassigned after declaration.
+
+```go
+const e = 42        // untyped constant
+const f float64 = 2.718
+const pi = 3.14159
+```
+
+#### Short Declaration (`:=`)
+
+Shorthand for `var` inside functions. Type is inferred.
+
+```go
+count := 10
+tmp := tempA
+```
+
+#### Multiple Declaration
+
+Declare multiple variables in a single `var` block. Type can be specified per field or inferred.
+
+```go
+var (
+	firstName = "Aaron"
+	lastName  = "Evanjulio"
+	version int = 1
+)
+```
+
+#### Swap Pattern
+
+Swap two variables using a temporary variable.
+
+```go
+tmp := tempA
+tempA = tempB
+tempB = tmp
+```

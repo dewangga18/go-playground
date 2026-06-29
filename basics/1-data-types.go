@@ -39,4 +39,45 @@ func main() {
 	// package-level const
 	fmt.Println("AppName =", AppName)
 	fmt.Println("Pi      =", Pi)
+
+	fmt.Println("\n=== boolean ===")
+	var trueConstant bool = true
+	var falseConstant bool = false
+	const numb1 int = 1
+
+	fmt.Println("True constant = ", trueConstant)
+	fmt.Println("False constant = ", falseConstant)
+	fmt.Println("1 == 1 ", 1 == numb1)
+	fmt.Println("1 != 1 ", 1 != numb1)
+
+	fmt.Println("\n=== string ===")
+	var str1 string = "Hello"
+
+	fmt.Println(str1)
+	fmt.Println("length of str1 is ", len(str1))
+	fmt.Println("index 0 is ", str1[0], "value is byte")
+
+
+	fmt.Println("\n=== variable declaration ===")
+	var tempA int = 1
+	var tempB int = 2
+
+	// can not swap like this
+	// tempA, tempB = tempB, tempA
+
+	// use temporary variable to swap
+	tmp := tempA
+	tempA = tempB
+	tempB = tmp
+
+	fmt.Println("tempA", tempA)
+	fmt.Println("tempB", tempB)
+
+	// multiple declaration
+	var(
+		firstName = "Aaron"
+		lastName  = "Evanjulio"
+	)
+
+	fmt.Println(firstName, lastName)
 }
