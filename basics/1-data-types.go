@@ -80,4 +80,18 @@ func main() {
 	)
 
 	fmt.Println(firstName, lastName)
+
+	fmt.Println("\n=== data conversation ===")
+	var byteVal uint8 = firstName[0] 
+	var byteToStr = string(byteVal)
+	fmt.Println("Value of byteVal from firstName[0]: ", byteVal)
+	fmt.Println("Convert byte to string: ", byteToStr)
+
+	var val32 int32 = 32769
+	var val64 int64 = int64(val32)
+	var val16 int16 = int16(val32)
+
+	fmt.Println("int32 to int64: ", val64)
+	fmt.Println("int32 to int16: ", val16, "// number overflow")
+
 }

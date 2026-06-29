@@ -132,3 +132,42 @@ tmp := tempA
 tempA = tempB
 tempB = tmp
 ```
+
+### Type Conversion
+
+Convert between types explicitly. Go does not support implicit type conversion.
+
+#### Byte to String
+
+Indexing a string returns a byte (`uint8`). Store it in a variable first, then convert using `string()`.
+
+```go
+var firstName = "Aaron"
+var byteVal uint8 = firstName[0]
+var byteToStr = string(byteVal)
+
+fmt.Println("Value of byteVal from firstName[0]:", byteVal)
+fmt.Println("Convert byte to string:", byteToStr)
+```
+
+> **Note:** `string(byteValue)` treats the byte as a Unicode code point. This works for ASCII characters because their byte value equals their code point.
+
+#### Integer Conversion
+
+Convert between integer types using `T(value)` syntax. Beware of overflow when converting to a smaller type.
+
+```go
+var val32 int32 = 32769
+var val64 int64 = int64(val32)    // 32769 — safe
+var val16 int16 = int16(val32)    // overflow! 32769 > int16 max (32767)
+
+fmt.Println("int32 to int64:", val64)
+fmt.Println("int32 to int16:", val16, "// number overflow")
+```
+
+| Conversion | Result | Notes |
+|-----------|--------|-------|
+| `int32` → `int64` | Safe | Wider type fits all values |
+| `int32` → `int16` | Overflow | Narrower type truncates bits |
+
+> **Note:** Always check the target type's range before converting to a narrower type to avoid silent overflow.
