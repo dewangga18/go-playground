@@ -103,6 +103,35 @@ fmt.Println("i %= 5:", i)
 
 > **Note:** The `%` (modulo) operator and its augmented variant `%=` only work with integer types.
 
+#### Unary Operators
+
+Unary operators work on a single operand.
+
+| Operator | Name | Example |
+|----------|------|---------|
+| `-` | Negation | `-a` negates the value of `a` |
+| `++` | Increment | `a++` adds 1 to `a` |
+| `--` | Decrement | `b--` subtracts 1 from `b` |
+
+```go
+var a = 10
+var b = -10
+
+fmt.Println("a =", a)    // 10
+fmt.Println("b =", b)    // -10
+
+fmt.Println("-a =", -a)  // -10
+fmt.Println("-b =", -b)  // 10
+
+a++
+fmt.Println("a++ =", a)  // 11
+
+b--
+fmt.Println("b-- =", b)  // -11
+```
+
+> **Note:** In Go, `++` and `--` are statements, not expressions. They cannot be used inside other expressions like `c = a++ + b`.
+
 ### Boolean Types
 
 A `bool` type represents a boolean value — either `true` or `false`.

@@ -16,6 +16,8 @@ func main() {
 	exampleTypeDeclaration()
 
 	exampleNumericOperation()
+
+	exampleUnaryOperator()
 }
 
 func exampleNumericVarAndConst() {
@@ -155,4 +157,23 @@ func exampleNumericOperation() {
 	fmt.Println("result i /= 5: ", i)
 	i %= 5
 	fmt.Println("result i %= 5: ", i)
+}
+
+func exampleUnaryOperator() {
+	fmt.Println("\n=== unary operator ===")
+
+	var a = 10
+	var b = -10
+	
+	fmt.Println("a = ", a)
+	fmt.Println("b = ", b)
+
+	fmt.Println("-a = ", -a)
+	fmt.Println("-b = ", -b)
+	fmt.Println("")
+
+	a++
+	b--
+	fmt.Println("a++ \n a = ", a)
+	fmt.Println("b-- \n b = ", b)
 }
