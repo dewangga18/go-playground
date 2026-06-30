@@ -2,13 +2,27 @@ package main
 
 import "fmt"
 
-// const at package level
-const (
-	AppName = "Go Playground"
-	Pi      = 3.14159
-)
-
 func main() {
+	exampleNumericVarAndConst()
+
+	exampleBoolean()
+
+	exampleString()
+
+	exampleVariableDeclaration()
+
+	exampleDataConversation()
+
+	exampleTypeDeclaration()
+}
+
+func exampleNumericVarAndConst() {
+	// const at package level
+	const (
+		AppName = "Go Playground"
+		Pi      = 3.14159
+	)
+
 	// === var ===
 	var a int8 = 127
 	var b uint8 = 255
@@ -39,7 +53,9 @@ func main() {
 	// package-level const
 	fmt.Println("AppName =", AppName)
 	fmt.Println("Pi      =", Pi)
+}
 
+func exampleBoolean() {
 	fmt.Println("\n=== boolean ===")
 	var trueConstant bool = true
 	var falseConstant bool = false
@@ -49,15 +65,18 @@ func main() {
 	fmt.Println("False constant = ", falseConstant)
 	fmt.Println("1 == 1 ", 1 == numb1)
 	fmt.Println("1 != 1 ", 1 != numb1)
+}
 
+func exampleString() {
 	fmt.Println("\n=== string ===")
 	var str1 string = "Hello"
 
 	fmt.Println(str1)
 	fmt.Println("length of str1 is ", len(str1))
 	fmt.Println("index 0 is ", str1[0], "value is byte")
+}
 
-
+func exampleVariableDeclaration() {
 	fmt.Println("\n=== variable declaration ===")
 	var tempA int = 1
 	var tempB int = 2
@@ -80,7 +99,10 @@ func main() {
 	)
 
 	fmt.Println(firstName, lastName)
+}
 
+func exampleDataConversation() {
+	firstName := "Aaron"
 	fmt.Println("\n=== data conversation ===")
 	var byteVal uint8 = firstName[0] 
 	var byteToStr = string(byteVal)
@@ -93,5 +115,16 @@ func main() {
 
 	fmt.Println("int32 to int64: ", val64)
 	fmt.Println("int32 to int16: ", val16, "// number overflow")
+}
 
+func exampleTypeDeclaration() {
+	fmt.Println("\n=== type declarations ===")
+	type WhatsappNumber string
+
+	var w1 WhatsappNumber = "08123456789"
+	var w2 string = "08123456789"
+
+	fmt.Println(w1)
+	fmt.Println(WhatsappNumber(w2))
+	fmt.Println("is equal? ", w1 == WhatsappNumber(w2))
 }

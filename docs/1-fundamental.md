@@ -1,4 +1,4 @@
-## Fundamental Data Types
+## Go Fundamental 
 
 Go provides a rich set of built-in data types. Each type has a fixed size and range, ensuring consistent behavior across platforms.
 
@@ -171,3 +171,20 @@ fmt.Println("int32 to int16:", val16, "// number overflow")
 | `int32` → `int16` | Overflow | Narrower type truncates bits |
 
 > **Note:** Always check the target type's range before converting to a narrower type to avoid silent overflow.
+
+### Type Declaration
+
+Create a new type from an existing type using `type`. The new type has the same underlying structure but is treated as a distinct type.
+
+```go
+type WhatsappNumber string
+
+var w1 WhatsappNumber = "08123456789"
+var w2 string = "08123456789"
+
+fmt.Println(w1)
+fmt.Println(WhatsappNumber(w2))
+fmt.Println("is equal? ", w1 == WhatsappNumber(w2)) // true
+```
+
+> **Note:** A type declaration creates a distinct type, not an alias. To convert between the original type and the declared type, use explicit conversion `T(value)`.
