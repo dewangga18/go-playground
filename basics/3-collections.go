@@ -2,13 +2,13 @@ package main
 
 import "fmt"
 
-func main() {
-	exampleArray()
+// func main() {
+// 	exampleArray()
 
-	exampleSlice()
+// 	exampleSlice()
 
-	exampleMap()
-}
+// 	exampleMap()
+// }
 
 func exampleArray() {
 	fmt.Println("=== Array ===")
