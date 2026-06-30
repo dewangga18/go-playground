@@ -18,6 +18,8 @@ func main() {
 	exampleNumericOperation()
 
 	exampleUnaryOperator()
+
+	exampleComparisonOperator()
 }
 
 func exampleNumericVarAndConst() {
@@ -176,4 +178,19 @@ func exampleUnaryOperator() {
 	b--
 	fmt.Println("a++ \n a = ", a)
 	fmt.Println("b-- \n b = ", b)
+}
+
+func exampleComparisonOperator() {
+	fmt.Println("\n=== comparison operator ===")
+	
+	const a = 1
+	const b = 2
+
+	fmt.Println("a = 1, b = 2")
+	fmt.Println(a > b, "// a > b")
+	fmt.Println(a < b, "// a < b")
+	fmt.Println(a >= b, "// a >= b")
+	fmt.Println(a <= b, "// a <= b")
+	fmt.Println(a == b, "// a == b")
+	fmt.Println(a != b, "// a != b")
 }

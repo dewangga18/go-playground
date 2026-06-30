@@ -132,6 +132,33 @@ fmt.Println("b-- =", b)  // -11
 
 > **Note:** In Go, `++` and `--` are statements, not expressions. They cannot be used inside other expressions like `c = a++ + b`.
 
+#### Comparison Operators
+
+Compare two values and return a `bool` (`true` or `false`).
+
+| Operator | Description | Example (`a=1, b=2`) |
+|----------|-------------|----------------------|
+| `>` | Greater than | `a > b` → `false` |
+| `<` | Less than | `a < b` → `true` |
+| `>=` | Greater than or equal | `a >= b` → `false` |
+| `<=` | Less than or equal | `a <= b` → `true` |
+| `==` | Equal to | `a == b` → `false` |
+| `!=` | Not equal to | `a != b` → `true` |
+
+```go
+const a = 1
+const b = 2
+
+fmt.Println(a > b, "// a > b")    // false
+fmt.Println(a < b, "// a < b")    // true
+fmt.Println(a >= b, "// a >= b")  // false
+fmt.Println(a <= b, "// a <= b")  // true
+fmt.Println(a == b, "// a == b")  // false
+fmt.Println(a != b, "// a != b")  // true
+```
+
+> **Note:** Comparison operators work with numeric types and strings. For `==` and `!=`, most types that support equality comparison are allowed (including `bool`). Operators like `<`, `>`, `<=`, `>=` only work with ordered types (numeric and string).
+
 ### Boolean Types
 
 A `bool` type represents a boolean value — either `true` or `false`.
