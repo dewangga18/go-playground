@@ -29,7 +29,7 @@ func exampleNumericVarAndConst() {
 	var c float32 = 3.14
 	var d complex64 = 1 + 2i
 
-	fmt.Println("=== var ===")
+	fmt.Println("=== Var: Mutable Variable ===")
 	fmt.Println("int8   =", a)
 	fmt.Println("uint8  =", b)
 	fmt.Println("float32 =", c)
@@ -43,7 +43,7 @@ func exampleNumericVarAndConst() {
 	const e = 42       // untyped constant
 	const f float64 = 2.718
 
-	fmt.Println("\n=== const ===")
+	fmt.Println("\n=== Const: Immutable Variable ===")
 	fmt.Println("const e =", e)
 	fmt.Println("const f =", f)
 
@@ -56,7 +56,7 @@ func exampleNumericVarAndConst() {
 }
 
 func exampleBoolean() {
-	fmt.Println("\n=== boolean ===")
+	fmt.Println("\n=== Boolean ===")
 	var trueConstant bool = true
 	var falseConstant bool = false
 	const numb1 int = 1
@@ -68,7 +68,7 @@ func exampleBoolean() {
 }
 
 func exampleString() {
-	fmt.Println("\n=== string ===")
+	fmt.Println("\n=== String ===")
 	var str1 string = "Hello"
 
 	fmt.Println(str1)
@@ -77,7 +77,7 @@ func exampleString() {
 }
 
 func exampleVariableDeclaration() {
-	fmt.Println("\n=== variable declaration ===")
+	fmt.Println("\n=== Variable Declaration ===")
 	var tempA int = 1
 	var tempB int = 2
 
@@ -103,7 +103,7 @@ func exampleVariableDeclaration() {
 
 func exampleDataConversation() {
 	firstName := "Aaron"
-	fmt.Println("\n=== data conversation ===")
+	fmt.Println("\n=== Data Conversation ===")
 	var byteVal uint8 = firstName[0] 
 	var byteToStr = string(byteVal)
 	fmt.Println("Value of byteVal from firstName[0]: ", byteVal)
@@ -118,7 +118,7 @@ func exampleDataConversation() {
 }
 
 func exampleTypeDeclaration() {
-	fmt.Println("\n=== type declarations ===")
+	fmt.Println("\n=== Type Declaration ===")
 	type WhatsappNumber string
 
 	var w1 WhatsappNumber = "08123456789"

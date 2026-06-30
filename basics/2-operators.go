@@ -2,18 +2,18 @@ package main
 
 import "fmt"
 
-func main() {
-	exampleNumericOperation()
+// func main() {
+// 	exampleNumericOperation()
 
-	exampleUnaryOperator()
+// 	exampleUnaryOperator()
 
-	exampleComparisonOperator()
+// 	exampleComparisonOperator()
 
-	exampleLogicalOperator()
-}
+// 	exampleLogicalOperator()
+// }
 
 func exampleNumericOperation() {
-	fmt.Println("\n=== numeric operation ===")
+	fmt.Println("\n=== Numeric Operation ===")
 	
 	const a = 10
 	const b = 10
@@ -26,6 +26,7 @@ func exampleNumericOperation() {
 	fmt.Println("result i (10 / 10 + 5 * 2 - 3): ", i)
 
 	// augmented assignment operations
+	fmt.Println("\n=== Augmented Assignment Operations ===")
 	i += 5
 	fmt.Println("result i += 5: ", i)
 	i -= 5
@@ -39,7 +40,7 @@ func exampleNumericOperation() {
 }
 
 func exampleUnaryOperator() {
-	fmt.Println("\n=== unary operator ===")
+	fmt.Println("\n=== Unary Operator ===")
 
 	var a = 10
 	var b = -10
@@ -58,7 +59,7 @@ func exampleUnaryOperator() {
 }
 
 func exampleComparisonOperator() {
-	fmt.Println("\n=== comparison operator ===")
+	fmt.Println("\n=== Comparison Operator ===")
 	
 	const a = 1
 	const b = 2
@@ -73,7 +74,7 @@ func exampleComparisonOperator() {
 }
 
 func exampleLogicalOperator() {
-	fmt.Println("\n=== logical operator ===")
+	fmt.Println("\n=== Logical Operator ===")
 	
 	trueVal := true
 	falseVal := false
