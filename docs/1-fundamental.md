@@ -132,6 +132,20 @@ fmt.Println("b-- =", b)  // -11
 
 > **Note:** In Go, `++` and `--` are statements, not expressions. They cannot be used inside other expressions like `c = a++ + b`.
 
+### Boolean Types
+
+A `bool` type represents a boolean value — either `true` or `false`.
+
+```go
+var trueConstant bool = true
+var falseConstant bool = false
+
+fmt.Println(trueConstant)   // true
+fmt.Println(falseConstant)  // false
+fmt.Println(1 == 1)         // true
+fmt.Println(1 != 1)         // false
+```
+
 #### Comparison Operators
 
 Compare two values and return a `bool` (`true` or `false`).
@@ -159,19 +173,34 @@ fmt.Println(a != b, "// a != b")  // true
 
 > **Note:** Comparison operators work with numeric types and strings. For `==` and `!=`, most types that support equality comparison are allowed (including `bool`). Operators like `<`, `>`, `<=`, `>=` only work with ordered types (numeric and string).
 
-### Boolean Types
+#### Logical Operators
 
-A `bool` type represents a boolean value — either `true` or `false`.
+Combine or invert boolean values. Return a `bool`.
+
+| Operator | Name | Description | Example |
+|----------|------|-------------|---------|
+| `&&` | AND | `true` if **both** operands are `true` | `true && false` → `false` |
+| `\|\|` | OR | `true` if **at least one** operand is `true` | `true \|\| false` → `true` |
+| `!` | NOT | Inverts the boolean value | `!true` → `false` |
 
 ```go
-var trueConstant bool = true
-var falseConstant bool = false
+trueVal := true
+falseVal := false
 
-fmt.Println(trueConstant)   // true
-fmt.Println(falseConstant)  // false
-fmt.Println(1 == 1)         // true
-fmt.Println(1 != 1)         // false
+// AND
+fmt.Println(trueVal && trueVal)   // true
+fmt.Println(trueVal && falseVal)  // false
+
+// OR
+fmt.Println(trueVal || falseVal)  // true
+fmt.Println(falseVal || falseVal) // false
+
+// NOT
+fmt.Println(!trueVal)   // false
+fmt.Println(!falseVal)  // true
 ```
+
+> **Note:** Go uses short-circuit evaluation. For `&&`, if the left operand is `false`, the right is not evaluated (result is always `false`). For `||`, if the left operand is `true`, the right is not evaluated.
 
 ### String Types
 
