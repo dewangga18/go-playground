@@ -14,6 +14,8 @@ func main() {
 	exampleDataConversation()
 
 	exampleTypeDeclaration()
+
+	exampleNumericOperation()
 }
 
 func exampleNumericVarAndConst() {
@@ -127,4 +129,30 @@ func exampleTypeDeclaration() {
 	fmt.Println(w1)
 	fmt.Println(WhatsappNumber(w2))
 	fmt.Println("is equal? ", w1 == WhatsappNumber(w2))
+}
+
+func exampleNumericOperation() {
+	fmt.Println("\n=== numeric operation ===")
+	
+	const a = 10
+	const b = 10
+	const c = 5
+	const d = 2
+	const e = 3
+
+	var i = a / b + c * d - e
+	
+	fmt.Println("result i (10 / 10 + 5 * 2 - 3): ", i)
+
+	// augmented assignment operations
+	i += 5
+	fmt.Println("result i += 5: ", i)
+	i -= 5
+	fmt.Println("result i -= 5: ", i)
+	i *= 5
+	fmt.Println("result i *= 5: ", i)
+	i /= 5
+	fmt.Println("result i /= 5: ", i)
+	i %= 5
+	fmt.Println("result i %= 5: ", i)
 }

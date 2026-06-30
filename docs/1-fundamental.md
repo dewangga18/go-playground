@@ -51,6 +51,58 @@ fmt.Println(a, b, c, d)
 
 > **Note:** The size of `int` and `uint` depends on the architecture — 32-bit on 32-bit systems, 64-bit on 64-bit systems. They are the most efficient integer types for the target platform.
 
+### Numeric Operations
+
+Go supports standard arithmetic operators for numeric types.
+
+#### Arithmetic Operators
+
+| Operator | Description | Example (`a=10, b=10, c=5, d=2, e=3`) |
+|----------|-------------|----------------------------------------|
+| `+` | Addition | `c + d` → `7` |
+| `-` | Subtraction | `d - e` → `-1` |
+| `*` | Multiplication | `c * d` → `10` |
+| `/` | Division | `a / b` → `1` |
+| `%` | Modulo (remainder) | `c % d` → `1` |
+
+Arithmetic follows standard operator precedence — multiplication and division are evaluated before addition and subtraction.
+
+```go
+const a = 10
+const b = 10
+const c = 5
+const d = 2
+const e = 3
+
+var i = a/b + c*d - e   // 10/10 + 5*2 - 3 = 1 + 10 - 3 = 8
+fmt.Println("result:", i)   // 8
+```
+
+#### Augmented Assignment
+
+Modify a variable by applying an operation and reassigning the result in one step.
+
+```go
+i := 8
+
+i += 5    // i = i + 5  → 13
+fmt.Println("i += 5:", i)
+
+i -= 5    // i = i - 5  → 8
+fmt.Println("i -= 5:", i)
+
+i *= 5    // i = i * 5  → 40
+fmt.Println("i *= 5:", i)
+
+i /= 5    // i = i / 5  → 8
+fmt.Println("i /= 5:", i)
+
+i %= 5    // i = i % 5  → 3
+fmt.Println("i %= 5:", i)
+```
+
+> **Note:** The `%` (modulo) operator and its augmented variant `%=` only work with integer types.
+
 ### Boolean Types
 
 A `bool` type represents a boolean value — either `true` or `false`.
