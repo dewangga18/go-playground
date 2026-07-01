@@ -286,3 +286,86 @@ for _, number := range numbers {
 | `func() { ... }()` | Call immediately (IIFE) |
 
 > **Note:** Anonymous functions capture variables from the surrounding scope (closures). In the IIFE example above, `number` is captured from the `for` loop.
+
+### Recursive Function
+
+A function that **calls itself** is called a recursive function. Every recursion needs a **base case** to stop the recursion.
+
+```go
+func recursiveFactorialFunction(value int) int {
+    if value == 1 {
+        return value
+    }
+    return value * recursiveFactorialFunction(value - 1)
+}
+```
+
+```
+=== Recursive Factorial Function ===
+3628800 Example from 10
+```
+
+```go
+result := recursiveFactorialFunction(10)
+fmt.Println(result, "Example from 10")   // 3628800 Example from 10
+```
+
+| Concept | Description |
+|---------|-------------|
+| **Base case** | `if value == 1 { return value }` — stops the recursion |
+| **Recursive case** | `value * recursiveFactorialFunction(value - 1)` — calls itself with a reduced value |
+
+How `factorial(10)` evaluates step by step:
+
+```
+factorial(10)
+→ 10 * factorial(9)
+→ 10 * 9 * factorial(8)
+→ ...
+→ 10 * 9 * 8 * 7 * 6 * 5 * 4 * 3 * 2 * 1  // base case reached
+→ 3628800
+```
+
+> **Note:** Go does not have tail-call optimization. Deep recursion may cause stack overflow. For large iterations, prefer loops.
+
+### Closure
+
+A **closure** is a function that captures and remembers variables from its surrounding scope, even after that scope has exited.
+
+```go
+func closureFunction() {
+    counter := 0
+
+    closure := func() {
+        fmt.Println("Increment")
+        counter++
+    }
+
+    closure()
+    closure()
+    closure()
+
+    fmt.Println(counter)
+}
+```
+
+```
+=== Closure Function ===
+Increment
+Increment
+Increment
+3
+```
+
+Key points:
+- The anonymous function assigned to `closure` **captures** the `counter` variable from `closureFunction()`
+- Each call to `closure()` increments the captured `counter`
+- The final value (`3`) proves the closure maintains state across calls
+
+| Feature | Description |
+|---------|-------------|
+| **Captures variables** | Remembers variables from the outer scope |
+| **State persists** | Variables persist between closure calls |
+| **Shared state** | Multiple closure calls share the same captured variable |
+
+> **Note:** Closures are commonly used for **stateful functions**, **callbacks**, and **function factories** (functions that return other functions with pre-configured state).
