@@ -2,13 +2,13 @@ package main
 
 import "fmt"
 
-func main() {
-	exampleIfExpression()
+// func main() {
+// 	exampleIfExpression()
 
-	exampleSwitch()
+// 	exampleSwitch()
 
-	exampleForLoop()
-}
+// 	exampleForLoop()
+// }
 
 func exampleIfExpression() {
 	fmt.Println("\n=== If Expression ===")
