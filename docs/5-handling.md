@@ -1,10 +1,10 @@
 ## Go Error Handling
 
-Go does not have `try-catch` like other languages. Instead, it uses three built-in mechanisms: **`defer`**, **`panic`**, and **`recover`** — working together to handle exceptional situations.
+No `try-catch` in Go. Uses `defer`, `panic`, `recover` instead.
 
 ### Defer
 
-`defer` schedules a function call to run **after** the surrounding function completes — whether it finishes normally or panics.
+Schedules a function call to run **after** the surrounding function completes — whether normal return or panic.
 
 ```go
 func exampleDefer() {
@@ -14,6 +14,8 @@ func exampleDefer() {
 }
 ```
 
+Output:
+
 ```
 === Defer Handling ===
 start session
@@ -22,19 +24,19 @@ end session defer
 
 | Behavior | Description |
 |----------|-------------|
-| **Execution timing** | Runs when the surrounding function returns or panics |
-| **Multiple defers** | Executed in **LIFO** order (last deferred runs first) |
-| **Arguments evaluated immediately** | Deferred function's arguments are evaluated at the time `defer` is called, not when it runs |
+| **Execution timing** | Runs when surrounding function returns or panics |
+| **Multiple defers** | **LIFO** order (last deferred runs first) |
+| **Arguments** | Evaluated at time of `defer`, not when it runs |
 
-> **Note:** `defer` is commonly used for cleanup operations — closing files, releasing mutexes, or printing teardown messages.
+> **Note:** Commonly used for cleanup — closing files, releasing mutexes, teardown messages.
 
 ### Panic
 
-`panic` stops the normal execution flow. When a function panics, it stops executing, runs its deferred calls, and propagates the panic upward.
+Stops normal execution, runs deferred calls, then propagates upward.
 
 #### Panic and Defer
 
-Deferred functions **always run**, even when a panic occurs.
+Deferred functions **always run**, even on panic.
 
 ```go
 func examplePanicAndDefer(err bool) {
@@ -48,7 +50,7 @@ func examplePanicAndDefer(err bool) {
 }
 ```
 
-When `err = false` — normal execution:
+Normal (`err = false`):
 
 ```
 === Panic and Defer Handling ===
@@ -56,7 +58,7 @@ function end
 end session defer
 ```
 
-When `err = true` — panic occurs:
+Panic (`err = true`):
 
 ```
 === Panic and Defer Handling ===
@@ -67,13 +69,11 @@ panic: something went wrong
 | Scenario | Defer runs? | After panic? |
 |----------|-------------|--------------|
 | Normal return | ✅ Yes | — |
-| Panic | ✅ Yes (before propagation) | ❌ No — program crashes |
-
-> **Note:** A panic without recovery will crash the program. Use `recover` to handle panics gracefully.
+| Panic | ✅ Yes (before propagation) | ❌ Program crashes |
 
 ### Recover
 
-`recover()` regains control of a panicking goroutine. It **only works inside a deferred function** — outside defer, it returns `nil`.
+`recover()` regains control of a panicking goroutine. **Only works inside a deferred function.**
 
 ```go
 func deferAndRecover() {
@@ -88,21 +88,21 @@ func examplePanicAndRecover() {
 }
 ```
 
+Output:
+
 ```
 === Panic and Recover Handling ===
 end session defer
 recover : something went wrong
 ```
 
-`recover()` catches the panic value (`"something went wrong"`) and prevents the program from crashing. Execution continues after the function that panicked.
-
 | Function | Purpose |
 |----------|---------|
-| `defer` | Schedule cleanup code that always runs |
-| `panic` | Signal an unrecoverable error |
-| `recover` | Catch and handle a panic gracefully |
+| `defer` | Schedule cleanup that always runs |
+| `panic` | Signal unrecoverable error |
+| `recover` | Catch panic gracefully |
 
-> **Note:** `recover()` returns the value passed to `panic()`. If there is no panic, `recover()` returns `nil`. Only use recover in `defer` — anywhere else it does nothing.
+> **Note:** `recover()` returns the panic value. Returns `nil` if no panic. Only useful inside `defer`.
 
 ### When to Use What
 
@@ -111,4 +111,4 @@ recover : something went wrong
 | **Cleanup** (close file, unlock mutex) | `defer` |
 | **Fatal error** (can't continue) | `panic` |
 | **Prevent crash** at boundary (HTTP handler, goroutine) | `recover` in `defer` |
-| **Expected errors** (invalid input, not found) | Return `error` (not covered here — see next chapter) |
+| **Expected errors** (invalid input, not found) | Return `error` (not covered here) |

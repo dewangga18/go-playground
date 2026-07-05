@@ -1,26 +1,23 @@
 ## Go Modules
-Go modules define a project's identity and manage its dependencies.
 
-### Setup
+Module management, build, and run commands for a Go project.
 
-```bash
-go mod init <module-name>
-```
+- `go mod init <module-name>` — initializes a Go project
+- `basic-module` → the module name used in import paths
 
 ## Go Build
-
-Compile the Go source code into an executable binary.
-
-> **Note:** Each project can only have one `main` function. If there are more than one, the build will error because the compiler won't know which is the entry point.
 
 ```bash
 go build ./basics/0-hello-world.go
 ```
 
-## Go Run
+- Compiles source into an executable binary
+- Only **1 `main` function** allowed per project — error if more exist
 
-Compile and run Go source code in one step without producing a binary.
+## Go Run
 
 ```bash
 go run ./basics/0-hello-world.go
 ```
+
+- Compile + run in one step, no binary produced

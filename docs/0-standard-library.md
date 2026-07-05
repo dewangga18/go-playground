@@ -1,6 +1,6 @@
 ## Standard Library
 
-A quick reference for Go standard library packages used throughout these notes.<br/>
+Quick reference for Go standard library packages I've encountered so far.
 
 ---
 
@@ -10,17 +10,17 @@ A quick reference for Go standard library packages used throughout these notes.<
 import "fmt"
 ```
 
-**Common Functions**
+**Functions used:**
 
 | Function | Description |
 |----------|-------------|
-| `Print()` | Prints without a newline |
-| `Println()` | Prints with a newline |
-| `Printf()` | Prints using a format string |
+| `Print()` | Print without newline |
+| `Println()` | Print with newline |
+| `Printf()` | Print with format string |
 | `Sprint()` | Returns a string |
 | `Sprintf()` | Returns a formatted string |
 
-**Example**
+**Example:**
 
 ```go
 fmt.Println("Hello", "World")
@@ -30,10 +30,8 @@ age := 20
 
 fmt.Printf("%s is %d years old\n", name, age)
 ```
-<br/>
 
 ---
-
 
 ### `strconv` — String Conversions
 
@@ -41,7 +39,7 @@ fmt.Printf("%s is %d years old\n", name, age)
 import "strconv"
 ```
 
-**Common Functions**
+**Functions used:**
 
 | Function | Description |
 |----------|-------------|
@@ -50,17 +48,14 @@ import "strconv"
 | `ParseBool()` | Converts `string` to `bool` |
 | `ParseFloat()` | Converts `string` to `float64` |
 
-**Example**
+**Example:**
 
 ```go
 number := 10
-
 text := strconv.Itoa(number)
-
 fmt.Println(text)
 ```
 
-**Notes**
-
+**Notes:**
 - `Itoa` = **Integer to ASCII**
 - `Atoi` = **ASCII to Integer**

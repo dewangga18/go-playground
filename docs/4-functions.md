@@ -1,10 +1,10 @@
 ## Go Functions
 
-A function is a reusable block of code that performs a specific task. Go functions are declared with `func`, can take parameters, return values, and can be passed around as values.
+Reusable blocks of code — params, returns, variadic, first-class functions, closures, and recursion.
 
 ### Basic Function
 
-A function with no parameters and no return value.
+No parameters, no return value.
 
 ```go
 func basicFunction() {
@@ -12,21 +12,14 @@ func basicFunction() {
 }
 ```
 
+Output:
+
 ```
 === Basic Function ===
 Hi!
 ```
 
-| Component | Description |
-|-----------|-------------|
-| `func` | Keyword to declare a function |
-| `basicFunction` | Function name |
-| `()` | Empty parameter list |
-| `{}` | Function body |
-
 ### Function Parameter
-
-Pass data into a function via parameters. Each parameter has a name and a type.
 
 ```go
 func functionParameter(firstName string, lastName string) {
@@ -34,36 +27,29 @@ func functionParameter(firstName string, lastName string) {
 }
 ```
 
-```
-=== Function Parameter ===
-Hello Aaron Evanjulio
-```
-
-> **Note:** If consecutive parameters share the same type, you can write it once: `firstName, lastName string`.
+> **Note:** Same-type params can be shortened: `firstName, lastName string`.
 
 ### Return Value
 
-A function can return a value. The return type is specified after the parameter list.
+Return type after parameter list.
 
 ```go
 func returnValue(width int, height int) int {
     return width * height
 }
+
+area := returnValue(10, 5)
+fmt.Println("Area is", area)   // 50
 ```
+
+Output:
 
 ```
 === Return Value Function ===
 Area is 50
 ```
 
-```go
-area := returnValue(10, 5)
-fmt.Println("Area is", area)   // 50
-```
-
 ### Multiple Return Values
-
-Go supports **multiple return values** — a common pattern for returning results alongside errors or metadata.
 
 ```go
 func returnValue2(width int, height int) (int, string) {
@@ -73,17 +59,7 @@ func returnValue2(width int, height int) (int, string) {
     }
     return area, "Small"
 }
-```
 
-```
-=== Return Value Function 2 ===
-Area is 300 and size is Large
-Area is 300
-```
-
-Use `_` (underscore) to ignore a return value you don't need:
-
-```go
 area, size := returnValue2(20, 15)
 fmt.Println("Area is", area, "and size is", size)   // Area is 300 and size is Large
 
@@ -91,11 +67,11 @@ area2, _ := returnValue2(15, 20)
 fmt.Println("Area is", area2)                         // Area is 300
 ```
 
-> **Note:** The `_` (blank identifier) is a write-only placeholder. Use it whenever a value is returned but not needed — Go will not compile if a declared variable is unused.
+> **Note:** `_` (blank identifier) to ignore return values. Go won't compile if a declared variable is unused.
 
 ### Named Return Values
 
-Return values can be **named** in the function signature. Named return values act as variables declared at the top of the function.
+Return values can be named — they act as local variables.
 
 ```go
 func namedReturnValue(width int, height int) (area int, size string) {
@@ -107,87 +83,54 @@ func namedReturnValue(width int, height int) (area int, size string) {
 }
 ```
 
-```
-=== Named Return Value Function ===
-Area is 100 and size is Large
-```
-
 | Feature | Description |
 |---------|-------------|
 | `(area int, size string)` | Named returns — declared as local variables |
 | `area = width * height` | Assign directly without `:=` |
-| `return area, size` | Explicit return (values can be omitted with naked return) |
+| `return area, size` | Explicit return |
 
-> **Note:** With named return values, you can use a **naked return** (`return` without values). It returns the current values of the named return variables. Use sparingly — explicit returns are clearer in complex functions.
+> **Note:** Can use **naked return** (`return` without values) with named returns. Use sparingly — explicit returns are clearer.
 
 ### Variadic Function
 
-A variadic function accepts a **variable number of arguments**. The `...` prefix before the type indicates variadic.
+Variable number of arguments using `...`.
 
 ```go
 func variadicFunction(numbers ...int) (total int) {
     for _, number := range numbers {
         total += number
     }
-
     average := total / len(numbers)
     return average
 }
-```
 
-```
-=== Variadic Function ===
-Average is 30
-Average is 30
-```
-
-Call with multiple arguments:
-
-```go
 average := variadicFunction(10, 20, 30, 40, 50)
 fmt.Println("Average is", average)   // 30
-```
 
-Or pass an existing slice using spread syntax `...`:
-
-```go
+// Spread a slice
 sliceWithVariadic := []int{10, 20, 30, 40, 50}
 average = variadicFunction(sliceWithVariadic...)
 fmt.Println("Average is", average)   // 30
 ```
 
-| Syntax | Description |
-|--------|-------------|
-| `numbers ...int` | Accepts zero or more `int` arguments |
-| `slice...` | Spreads a slice into individual arguments |
-
-> **Note:** The variadic parameter must be the **last** parameter in the function signature.
+> **Note:** Variadic param must be the **last** parameter.
 
 ### Function As Value
 
-Functions in Go are **first-class citizens** — they can be assigned to variables and passed around like any other value.
+Functions are first-class — assign to variables.
 
 ```go
 func functionAsValue(name string) string {
     return "Good bye, " + name + "!"
 }
-```
 
-```
-=== Function As Value ===
-Good bye, Aaron!
-```
-
-Assign a function to a variable and call it:
-
-```go
 goodBye := functionAsValue
 fmt.Println(goodBye("Aaron"))   // Good bye, Aaron!
 ```
 
 ### Function As Parameter
 
-Functions can be passed as arguments to other functions. This enables **callback** patterns.
+Pass functions as arguments (callback pattern).
 
 ```go
 func filterOddNumber(number int) string {
@@ -200,16 +143,11 @@ func filterOddNumber(number int) string {
 func functionAsParams(number int, filter func(int) string) {
     fmt.Println(filter(number))
 }
+
+functionAsParams(11, filterOddNumber)   // 11 is Odd
 ```
 
-```
-11 is Odd
-12 is Even
-```
-
-> **Note:** `strconv.Itoa()` converts an `int` to its string representation. `Itoa` stands for "Integer to ASCII".
-
-For cleaner signatures, define a **type alias** for the function type:
+Type alias for cleaner signatures:
 
 ```go
 type Filter func(int) string
@@ -217,28 +155,15 @@ type Filter func(int) string
 func functionAsParams2(number int, filter Filter) {
     fmt.Println(filter(number))
 }
-```
 
-```
-13 is Odd
-14 is Even
-```
-
-| Approach | Code | Description |
-|----------|------|-------------|
-| Inline | `filter func(int) string` | Function type written directly in parameter |
-| Type alias | `type Filter func(int) string` | Named type for reuse |
-
-```go
-functionAsParams(11, filterOddNumber)   // 11 is Odd
-functionAsParams(12, filterOddNumber)   // 12 is Even
 functionAsParams2(13, filterOddNumber)  // 13 is Odd
-functionAsParams2(14, filterOddNumber)  // 14 is Even
 ```
+
+> **Note:** `strconv.Itoa()` converts `int` to string. Itoa = "Integer to ASCII".
 
 ### Anonymous Function
 
-A function without a name. Anonymous functions are useful for short-lived logic, closures, or inline operations.
+Function without a name.
 
 #### Assigned to Variable
 
@@ -263,8 +188,6 @@ fmt.Println(result)   // 25
 
 #### Immediately Invoked (IIFE)
 
-An anonymous function that runs immediately after declaration.
-
 ```go
 numbers := []int{1, 2, 3}
 
@@ -273,23 +196,12 @@ for _, number := range numbers {
         fmt.Println(number)
     }()
 }
-
-// Output:
-// 1
-// 2
-// 3
+// Output: 1, 2, 3
 ```
-
-| Form | Description |
-|------|-------------|
-| `func() { ... }` | Assign to variable, call later |
-| `func() { ... }()` | Call immediately (IIFE) |
-
-> **Note:** Anonymous functions capture variables from the surrounding scope (closures). In the IIFE example above, `number` is captured from the `for` loop.
 
 ### Recursive Function
 
-A function that **calls itself** is called a recursive function. Every recursion needs a **base case** to stop the recursion.
+Function that calls itself. Needs a **base case** to stop.
 
 ```go
 func recursiveFactorialFunction(value int) int {
@@ -298,39 +210,31 @@ func recursiveFactorialFunction(value int) int {
     }
     return value * recursiveFactorialFunction(value - 1)
 }
-```
 
-```
-=== Recursive Factorial Function ===
-3628800 Example from 10
-```
-
-```go
 result := recursiveFactorialFunction(10)
 fmt.Println(result, "Example from 10")   // 3628800 Example from 10
 ```
 
 | Concept | Description |
 |---------|-------------|
-| **Base case** | `if value == 1 { return value }` — stops the recursion |
-| **Recursive case** | `value * recursiveFactorialFunction(value - 1)` — calls itself with a reduced value |
+| **Base case** | `if value == 1` — stops recursion |
+| **Recursive case** | `value * recursiveFactorialFunction(value - 1)` — calls itself |
 
-How `factorial(10)` evaluates step by step:
+Step by step:
 
 ```
 factorial(10)
 → 10 * factorial(9)
-→ 10 * 9 * factorial(8)
-→ ...
-→ 10 * 9 * 8 * 7 * 6 * 5 * 4 * 3 * 2 * 1  // base case reached
+→ 10 * 9 * factorial(8) ...
+→ 10 * 9 * 8 * 7 * 6 * 5 * 4 * 3 * 2 * 1
 → 3628800
 ```
 
-> **Note:** Go does not have tail-call optimization. Deep recursion may cause stack overflow. For large iterations, prefer loops.
+> **Note:** Go doesn't have tail-call optimization. Deep recursion may cause stack overflow — prefer loops for large iterations.
 
 ### Closure
 
-A **closure** is a function that captures and remembers variables from its surrounding scope, even after that scope has exited.
+Function that captures variables from its surrounding scope — state persists across calls.
 
 ```go
 func closureFunction() {
@@ -349,6 +253,8 @@ func closureFunction() {
 }
 ```
 
+Output:
+
 ```
 === Closure Function ===
 Increment
@@ -357,15 +263,8 @@ Increment
 3
 ```
 
-Key points:
-- The anonymous function assigned to `closure` **captures** the `counter` variable from `closureFunction()`
-- Each call to `closure()` increments the captured `counter`
-- The final value (`3`) proves the closure maintains state across calls
-
 | Feature | Description |
 |---------|-------------|
-| **Captures variables** | Remembers variables from the outer scope |
-| **State persists** | Variables persist between closure calls |
-| **Shared state** | Multiple closure calls share the same captured variable |
-
-> **Note:** Closures are commonly used for **stateful functions**, **callbacks**, and **function factories** (functions that return other functions with pre-configured state).
+| **Captures variables** | Remembers `counter` from outer scope |
+| **State persists** | Counter increments across calls |
+| **Shared state** | All closure calls share the same captured variable |

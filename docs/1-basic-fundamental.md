@@ -1,6 +1,6 @@
-## Go Fundamental 
+## Go Fundamental
 
-Go provides a rich set of built-in data types. Each type has a fixed size and range, ensuring consistent behavior across platforms.
+All the built-in data types Go has — numeric, boolean, string — plus how to declare variables and convert between types.
 
 ### Numeric Types
 
@@ -28,113 +28,83 @@ fmt.Println(a, b, c, d)
 
 #### Floats
 
-| Type | Size | Description |
-|------|------|-------------|
-| `float32` | 32-bit | IEEE 754 single-precision (~6 decimal digits) |
-| `float64` | 64-bit | IEEE 754 double-precision (~15 decimal digits) |
+| Type | Size | Precision |
+|------|------|-----------|
+| `float32` | 32-bit | IEEE 754 single (~6 decimal digits) |
+| `float64` | 64-bit | IEEE 754 double (~15 decimal digits) |
 
 #### Complex Numbers
 
 | Type | Size | Description |
 |------|------|-------------|
-| `complex64` | 64-bit | Complex number with `float32` real and imaginary parts |
-| `complex128` | 128-bit | Complex number with `float64` real and imaginary parts |
+| `complex64` | 64-bit | `float32` real + imaginary |
+| `complex128` | 128-bit | `float64` real + imaginary |
 
 #### Aliases
 
-| Alias | Underlying Type | Description |
-|-------|-----------------|-------------|
-| `byte` | `uint8` | Represents a single byte of data |
+| Alias | Underlying | Notes |
+|-------|------------|-------|
+| `byte` | `uint8` | Represents a single byte |
 | `rune` | `int32` | Represents a Unicode code point |
-| `int` | `int32` or `int64` | Platform-dependent; at least 32-bit |
-| `uint` | `uint32` or `uint64` | Platform-dependent; at least 32-bit |
+| `int` | `int32` or `int64` | Platform-dependent (at least 32-bit) |
+| `uint` | `uint32` or `uint64` | Platform-dependent (at least 32-bit) |
 
-> **Note:** The size of `int` and `uint` depends on the architecture — 32-bit on 32-bit systems, 64-bit on 64-bit systems. They are the most efficient integer types for the target platform.
+> **Note:** `int`/`uint` size depends on architecture — 32-bit on 32-bit systems, 64-bit on 64-bit.
 
 ### Numeric Operations
 
-Go supports standard arithmetic operators for numeric types.
-
 #### Arithmetic Operators
 
-| Operator | Description | Example (`a=10, b=10, c=5, d=2, e=3`) |
-|----------|-------------|----------------------------------------|
+| Op | Description | Example (`a=10, b=10, c=5, d=2, e=3`) |
+|----|-------------|----------------------------------------|
 | `+` | Addition | `c + d` → `7` |
 | `-` | Subtraction | `d - e` → `-1` |
 | `*` | Multiplication | `c * d` → `10` |
 | `/` | Division | `a / b` → `1` |
-| `%` | Modulo (remainder) | `c % d` → `1` |
+| `%` | Modulo | `c % d` → `1` |
 
-Arithmetic follows standard operator precedence — multiplication and division are evaluated before addition and subtraction.
+Standard precedence applies: `*`/`/`/`%` before `+`/`-`.
 
 ```go
-const a = 10
-const b = 10
-const c = 5
-const d = 2
-const e = 3
+const a = 10; const b = 10; const c = 5; const d = 2; const e = 3
 
-var i = a/b + c*d - e   // 10/10 + 5*2 - 3 = 1 + 10 - 3 = 8
+var i = a/b + c*d - e   // 1 + 10 - 3 = 8
 fmt.Println("result:", i)   // 8
 ```
 
 #### Augmented Assignment
 
-Modify a variable by applying an operation and reassigning the result in one step.
-
 ```go
 i := 8
-
 i += 5    // i = i + 5  → 13
-fmt.Println("i += 5:", i)
-
 i -= 5    // i = i - 5  → 8
-fmt.Println("i -= 5:", i)
-
 i *= 5    // i = i * 5  → 40
-fmt.Println("i *= 5:", i)
-
 i /= 5    // i = i / 5  → 8
-fmt.Println("i /= 5:", i)
-
 i %= 5    // i = i % 5  → 3
-fmt.Println("i %= 5:", i)
 ```
 
-> **Note:** The `%` (modulo) operator and its augmented variant `%=` only work with integer types.
+> **Note:** `%` and `%=` only work with integer types.
 
 #### Unary Operators
 
-Unary operators work on a single operand.
-
-| Operator | Name | Example |
-|----------|------|---------|
-| `-` | Negation | `-a` negates the value of `a` |
-| `++` | Increment | `a++` adds 1 to `a` |
-| `--` | Decrement | `b--` subtracts 1 from `b` |
+| Op | Name | Example |
+|----|------|---------|
+| `-` | Negation | `-a` |
+| `++` | Increment | `a++` |
+| `--` | Decrement | `b--` |
 
 ```go
-var a = 10
-var b = -10
-
+var a = 10; var b = -10
 fmt.Println("a =", a)    // 10
-fmt.Println("b =", b)    // -10
-
-fmt.Println("-a =", -a)  // -10
-fmt.Println("-b =", -b)  // 10
-
 a++
 fmt.Println("a++ =", a)  // 11
-
 b--
 fmt.Println("b-- =", b)  // -11
 ```
 
-> **Note:** In Go, `++` and `--` are statements, not expressions. They cannot be used inside other expressions like `c = a++ + b`.
+> **Note:** `++` and `--` are **statements** in Go, not expressions. Can't use inside other expressions like `c = a++ + b`.
 
 ### Boolean Types
-
-A `bool` type represents a boolean value — either `true` or `false`.
 
 ```go
 var trueConstant bool = true
@@ -148,121 +118,77 @@ fmt.Println(1 != 1)         // false
 
 #### Comparison Operators
 
-Compare two values and return a `bool` (`true` or `false`).
-
-| Operator | Description | Example (`a=1, b=2`) |
-|----------|-------------|----------------------|
+| Op | Description | Example (`a=1, b=2`) |
+|----|-------------|----------------------|
 | `>` | Greater than | `a > b` → `false` |
 | `<` | Less than | `a < b` → `true` |
-| `>=` | Greater than or equal | `a >= b` → `false` |
-| `<=` | Less than or equal | `a <= b` → `true` |
-| `==` | Equal to | `a == b` → `false` |
-| `!=` | Not equal to | `a != b` → `true` |
+| `>=` | Greater or equal | `a >= b` → `false` |
+| `<=` | Less or equal | `a <= b` → `true` |
+| `==` | Equal | `a == b` → `false` |
+| `!=` | Not equal | `a != b` → `true` |
 
-```go
-const a = 1
-const b = 2
-
-fmt.Println(a > b, "// a > b")    // false
-fmt.Println(a < b, "// a < b")    // true
-fmt.Println(a >= b, "// a >= b")  // false
-fmt.Println(a <= b, "// a <= b")  // true
-fmt.Println(a == b, "// a == b")  // false
-fmt.Println(a != b, "// a != b")  // true
-```
-
-> **Note:** Comparison operators work with numeric types and strings. For `==` and `!=`, most types that support equality comparison are allowed (including `bool`). Operators like `<`, `>`, `<=`, `>=` only work with ordered types (numeric and string).
+Works with numeric types and strings. `<`, `>`, `<=`, `>=` only work with ordered types.
 
 #### Logical Operators
 
-Combine or invert boolean values. Return a `bool`.
+| Op | Name | Description | Example |
+|----|------|-------------|---------|
+| `&&` | AND | `true` if **both** are `true` | `true && false` → `false` |
+| `\|\|` | OR | `true` if **at least one** is `true` | `true \|\| false` → `true` |
+| `!` | NOT | Inverts boolean | `!true` → `false` |
 
-| Operator | Name | Description | Example |
-|----------|------|-------------|---------|
-| `&&` | AND | `true` if **both** operands are `true` | `true && false` → `false` |
-| `\|\|` | OR | `true` if **at least one** operand is `true` | `true \|\| false` → `true` |
-| `!` | NOT | Inverts the boolean value | `!true` → `false` |
-
-```go
-trueVal := true
-falseVal := false
-
-// AND
-fmt.Println(trueVal && trueVal)   // true
-fmt.Println(trueVal && falseVal)  // false
-
-// OR
-fmt.Println(trueVal || falseVal)  // true
-fmt.Println(falseVal || falseVal) // false
-
-// NOT
-fmt.Println(!trueVal)   // false
-fmt.Println(!falseVal)  // true
-```
-
-> **Note:** Go uses short-circuit evaluation. For `&&`, if the left operand is `false`, the right is not evaluated (result is always `false`). For `||`, if the left operand is `true`, the right is not evaluated.
+Short-circuit evaluation: `&&` stops if left is `false`, `||` stops if left is `true`.
 
 ### String Types
 
-A `string` is a sequence of bytes. Strings are immutable in Go.
+Strings are sequences of bytes. **Immutable** in Go.
 
 ```go
 var str1 string = "Hello"
 
 fmt.Println(str1)               // Hello
 fmt.Println(len(str1))          // 5
-fmt.Println(str1[0])            // 72 (byte value, not char)
+fmt.Println(str1[0])            // 72 (byte value, not character)
 ```
 
-> **Note:** Indexing a string returns a byte value, not a character. For Unicode characters, use `rune`.
+> **Note:** Indexing a string returns a **byte** (`uint8`), not a character. For Unicode characters, use `rune`.
 
 ### Variable Declaration
 
-Go provides several ways to declare variables.
-
-#### var
-
-Explicit declaration with type or inferred type.
+#### `var` — explicit
 
 ```go
 var a int8 = 127
 var name = "Go"  // type inferred
 ```
 
-#### const
-
-Immutable values. Cannot be reassigned after declaration.
+#### `const` — immutable
 
 ```go
 const e = 42        // untyped constant
-const f float64 = 2.718
 const pi = 3.14159
 ```
 
-#### Short Declaration (`:=`)
+#### `:=` — short declaration
 
-Shorthand for `var` inside functions. Type is inferred.
+Shorthand for `var` inside functions. Type inferred.
 
 ```go
 count := 10
 tmp := tempA
 ```
 
-#### Multiple Declaration
-
-Declare multiple variables in a single `var` block. Type can be specified per field or inferred.
+#### Multiple declaration
 
 ```go
 var (
-	firstName = "Aaron"
-	lastName  = "Evanjulio"
-	version int = 1
+    firstName = "Aaron"
+    lastName  = "Evanjulio"
+    version int = 1
 )
 ```
 
-#### Swap Pattern
-
-Swap two variables using a temporary variable.
+#### Swap pattern
 
 ```go
 tmp := tempA
@@ -272,11 +198,9 @@ tempB = tmp
 
 ### Type Conversion
 
-Convert between types explicitly. Go does not support implicit type conversion.
+Go doesn't support implicit conversion — must be explicit with `T(value)`.
 
 #### Byte to String
-
-Indexing a string returns a byte (`uint8`). Store it in a variable first, then convert using `string()`.
 
 ```go
 var firstName = "Aaron"
@@ -287,19 +211,14 @@ fmt.Println("Value of byteVal from firstName[0]:", byteVal)
 fmt.Println("Convert byte to string:", byteToStr)
 ```
 
-> **Note:** `string(byteValue)` treats the byte as a Unicode code point. This works for ASCII characters because their byte value equals their code point.
+> **Note:** `string(byteValue)` treats the byte as a Unicode code point. Works for ASCII because byte value = code point.
 
 #### Integer Conversion
-
-Convert between integer types using `T(value)` syntax. Beware of overflow when converting to a smaller type.
 
 ```go
 var val32 int32 = 32769
 var val64 int64 = int64(val32)    // 32769 — safe
 var val16 int16 = int16(val32)    // overflow! 32769 > int16 max (32767)
-
-fmt.Println("int32 to int64:", val64)
-fmt.Println("int32 to int16:", val16, "// number overflow")
 ```
 
 | Conversion | Result | Notes |
@@ -307,11 +226,11 @@ fmt.Println("int32 to int16:", val16, "// number overflow")
 | `int32` → `int64` | Safe | Wider type fits all values |
 | `int32` → `int16` | Overflow | Narrower type truncates bits |
 
-> **Note:** Always check the target type's range before converting to a narrower type to avoid silent overflow.
+> **Note:** Always check target type's range before converting to narrower type — silent overflow.
 
 ### Type Declaration
 
-Create a new type from an existing type using `type`. The new type has the same underlying structure but is treated as a distinct type.
+Create a new distinct type from an existing type using `type`. Not an alias — explicit conversion required.
 
 ```go
 type WhatsappNumber string
@@ -323,5 +242,3 @@ fmt.Println(w1)
 fmt.Println(WhatsappNumber(w2))
 fmt.Println("is equal? ", w1 == WhatsappNumber(w2)) // true
 ```
-
-> **Note:** A type declaration creates a distinct type, not an alias. To convert between the original type and the declared type, use explicit conversion `T(value)`.
