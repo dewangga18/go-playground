@@ -59,3 +59,27 @@ fmt.Println(text)
 **Notes:**
 - `Itoa` = **Integer to ASCII**
 - `Atoi` = **ASCII to Integer**
+
+---
+
+### `errors` — Error Creation
+
+```go
+import "errors"
+```
+
+**Functions used:**
+
+| Function | Description |
+|----------|-------------|
+| `New()` | Creates a new error with a message string |
+
+**Example:**
+
+```go
+return 0, errors.New("cannot divide by zero")
+```
+
+**Notes:**
+- `error` is a built-in interface, not a package. `errors` is the package for creating and working with errors.
+- `errors.New()` creates a simple error. For structured errors, implement the `Error()` interface on a custom struct.

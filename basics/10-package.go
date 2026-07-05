@@ -7,9 +7,9 @@ import(
 	_ "basic-module/basics/example-package/blank" // blank identifier used to force initialization of package's init function
 )
 
-func main() {
-	mainPackage()
-}
+// func main() {
+// 	mainPackage()
+// }
 
 func mainPackage() {
 	fmt.Println("\n=== Package Import Example ===")
