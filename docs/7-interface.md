@@ -4,7 +4,7 @@ An **interface** in Go is a set of **method signatures**. Unlike other languages
 
 ---
 
-### Interface Definition & Implementation
+### Interface Definition & Implicit Implementation
 
 Define an interface using the `type` and `interface` keywords. A struct implements it implicitly by defining the matching methods.
 
@@ -22,7 +22,23 @@ func (p Person) GetName() string {
 }
 ```
 
-A variable of the interface type can hold any value whose type implements that interface:
+`Person` automatically satisfies `HasName` because it has a `GetName() string` method. No explicit declaration needed.
+
+> **Note:** Implementation is **implicit** — no `implements` keyword is required. Any type that has all the required methods with matching signatures automatically satisfies the interface.
+
+---
+
+### Interface as Parameter
+
+Interfaces become powerful when used as parameter types. A function that accepts an interface can work with **any type** that satisfies it.
+
+```go
+func PrintName(h HasName) {
+    fmt.Println(h.GetName())
+}
+```
+
+The usage follows a clear pattern — declare an interface variable, assign a concrete value, then pass it to the function:
 
 ```go
 var person HasName
@@ -36,30 +52,12 @@ Output:
 Aaron Evanjulio
 ```
 
-> **Note:** Implementation is **implicit** — no `implements` keyword is needed. Any struct that has all the methods with matching signatures automatically satisfies the interface.
-
----
-
-### Interface as Parameter
-
-Interfaces can be used as parameter types. This allows a function to accept **any type** that satisfies the interface.
-
-```go
-func PrintName(h HasName) {
-    fmt.Println(h.GetName())
-}
-```
-
-Usage:
-
-```go
-PrintName(Person{"Aaron Evanjulio"})   // Aaron Evanjulio
-```
-
 | Without Interface | With Interface |
 |-----------------|----------------|
 | Must create separate functions for each struct | One function can accept many different structs |
 | Less flexible | More modular and extensible |
+
+> **Note:** `Person{"Aaron Evanjulio"}` is a **positional struct literal** — values are mapped by position: `name = "Aaron Evanjulio"`.
 
 ---
 
