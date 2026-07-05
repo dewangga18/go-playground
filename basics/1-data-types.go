@@ -3,18 +3,22 @@ package main
 import "fmt"
 
 // func main() {
-// 	exampleNumericVarAndConst()
-
-// 	exampleBoolean()
-
-// 	exampleString()
-
-// 	exampleVariableDeclaration()
-
-// 	exampleDataConversation()
-
-// 	exampleTypeDeclaration()
+// 	mainDataTypes()
 // }
+
+func mainDataTypes() {
+	exampleNumericVarAndConst()
+
+	exampleBoolean()
+
+	exampleString()
+
+	exampleVariableDeclaration()
+
+	exampleDataConversation()
+
+	exampleTypeDeclaration()
+}
 
 func exampleNumericVarAndConst() {
 	// const at package level

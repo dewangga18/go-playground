@@ -3,12 +3,16 @@ package main
 import "fmt"
 
 // func main() {
-// 	exampleIfExpression()
-
-// 	exampleSwitch()
-
-// 	exampleForLoop()
+// 	mainControlFlow()
 // }
+
+func mainControlFlow() {
+	exampleIfExpression()
+
+	exampleSwitch()
+
+	exampleForLoop()
+}
 
 func exampleIfExpression() {
 	fmt.Println("\n=== If Expression ===")

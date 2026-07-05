@@ -3,45 +3,49 @@ package main
 import "fmt"
 
 // func main() {
-// 	fmt.Println("=== Interface Example ===")
-// 	var person HasName
-// 	person = Person{"Aaron Evanjulio"}
-// 	PrintName(person)
-	
-// 	fmt.Println("\n=== Empty Interface Example ===")
-// 	var emptyOld = Upss()
-// 	fmt.Println(emptyOld)
-// 	var emptyNew = Ups()
-// 	fmt.Println(emptyNew)
-
-// 	fmt.Println("\n=== Nil Example ===")
-// 	example := newExample("")
-// 	fmt.Println(example)
-// 	val := example["name"]
-// 	if val == "" {
-// 		fmt.Println("Value is empty")
-// 	} else {
-// 		fmt.Println(val)
-// 	}
-// 	example = newExample("Aaron")
-// 	fmt.Println(example["name"])
-
-// 	fmt.Println("\n=== Type Assertion Example ===")
-// 	result := random()
-// 	resultString := result.(string)
-// 	fmt.Println(resultString)
-
-// 	// fmt.Println(result.(int)) // trigger panic
-// 	// better use switch
-// 	switch value := result.(type) {
-// 	case string:
-// 		fmt.Println("String", value)
-// 	case int:
-// 		fmt.Println("Int", value)
-// 	default:
-// 		fmt.Println("Unknown", value)
-// 	}
+// 	mainInterface()
 // }
+
+func mainInterface() {
+	fmt.Println("=== Interface Example ===")
+	var person HasName
+	person = Person{"Aaron Evanjulio"}
+	PrintName(person)
+	
+	fmt.Println("\n=== Empty Interface Example ===")
+	var emptyOld = Upss()
+	fmt.Println(emptyOld)
+	var emptyNew = Ups()
+	fmt.Println(emptyNew)
+
+	fmt.Println("\n=== Nil Example ===")
+	example := newExample("")
+	fmt.Println(example)
+	val := example["name"]
+	if val == "" {
+		fmt.Println("Value is empty")
+	} else {
+		fmt.Println(val)
+	}
+	example = newExample("Aaron")
+	fmt.Println(example["name"])
+
+	fmt.Println("\n=== Type Assertion Example ===")
+	result := random()
+	resultString := result.(string)
+	fmt.Println(resultString)
+
+	// fmt.Println(result.(int)) // trigger panic
+	// better use switch
+	switch value := result.(type) {
+	case string:
+		fmt.Println("String", value)
+	case int:
+		fmt.Println("Int", value)
+	default:
+		fmt.Println("Unknown", value)
+	}
+}
 
 // interface section
 type HasName interface {

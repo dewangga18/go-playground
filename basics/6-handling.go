@@ -3,13 +3,17 @@ package main
 import "fmt"
 
 // func main() {
-// 	exampleDefer()
-
-// 	examplePanicAndDefer(false)
-// 	// examplePanicAndDefer(true)
-
-// 	examplePanicAndRecover()
+// 	mainHandling()
 // }
+
+func mainHandling() {
+	exampleDefer()
+
+	examplePanicAndDefer(false)
+	// examplePanicAndDefer(true)
+
+	examplePanicAndRecover()
+}
 
 func exampleDefer() {
 	fmt.Println("\n=== Defer Handling ===")

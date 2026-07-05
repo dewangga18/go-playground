@@ -6,48 +6,52 @@ import (
 )
 
 // func main() {
-// 	basicFunction()
-
-// 	functionParameter("Aaron", "Evanjulio")
-
-// 	area := returnValue(10, 5)
-// 	fmt.Println("Area is", area)
-
-// 	fmt.Println("\n=== Return Value Function 2 ===")
-// 	area2, size2 := returnValue2(20, 15)
-// 	fmt.Println("Area is", area2, "and size is", size2)
-// 	area3, _ := returnValue2(15, 20)
-// 	fmt.Println("Area is", area3)
-
-// 	area4, size4 := namedReturnValue(10, 10)
-// 	fmt.Println("Area is", area4, "and size is", size4)
-
-// 	fmt.Println("\n=== Variadic Function ===")
-// 	average := variadicFunction(10, 20, 30, 40, 50)
-// 	fmt.Println("Average is", average)
-// 	sliceWithVariadic := []int{10, 20, 30, 40, 50}
-// 	average = variadicFunction(sliceWithVariadic...)
-// 	fmt.Println("Average is", average)
-
-// 	goodBye := functionAsValue
-// 	fmt.Println(goodBye("Aaron"))
-
-// 	fmt.Println("\n=== Function As Params ===")
-// 	functionAsParams(11, filterOddNumber)
-// 	functionAsParams(12, filterOddNumber)
-// 	functionAsParams2(13, filterOddNumber)
-// 	functionAsParams2(14, filterOddNumber)
-
-// 	fmt.Println("\n=== Anonymous Function ===")
-// 	anonymousFunction()
-// 	anonymousFunction2()
-// 	anonymousFunction3()
-
-// 	fmt.Println("\n=== Recursive Factorial Function ===")
-// 	fmt.Println(recursiveFactorialFunction(10), "Example from 10")
-
-// 	closureFunction()
+// 	mainFunctions()
 // }
+
+func mainFunctions() {
+	basicFunction()
+
+	functionParameter("Aaron", "Evanjulio")
+
+	area := returnValue(10, 5)
+	fmt.Println("Area is", area)
+
+	fmt.Println("\n=== Return Value Function 2 ===")
+	area2, size2 := returnValue2(20, 15)
+	fmt.Println("Area is", area2, "and size is", size2)
+	area3, _ := returnValue2(15, 20)
+	fmt.Println("Area is", area3)
+
+	area4, size4 := namedReturnValue(10, 10)
+	fmt.Println("Area is", area4, "and size is", size4)
+
+	fmt.Println("\n=== Variadic Function ===")
+	average := variadicFunction(10, 20, 30, 40, 50)
+	fmt.Println("Average is", average)
+	sliceWithVariadic := []int{10, 20, 30, 40, 50}
+	average = variadicFunction(sliceWithVariadic...)
+	fmt.Println("Average is", average)
+
+	goodBye := functionAsValue
+	fmt.Println(goodBye("Aaron"))
+
+	fmt.Println("\n=== Function As Params ===")
+	functionAsParams(11, filterOddNumber)
+	functionAsParams(12, filterOddNumber)
+	functionAsParams2(13, filterOddNumber)
+	functionAsParams2(14, filterOddNumber)
+
+	fmt.Println("\n=== Anonymous Function ===")
+	anonymousFunction()
+	anonymousFunction2()
+	anonymousFunction3()
+
+	fmt.Println("\n=== Recursive Factorial Function ===")
+	fmt.Println(recursiveFactorialFunction(10), "Example from 10")
+
+	closureFunction()
+}
 
 func basicFunction() {
 	fmt.Println("\n=== Basic Function ===")

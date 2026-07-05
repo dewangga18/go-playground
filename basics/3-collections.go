@@ -3,12 +3,16 @@ package main
 import "fmt"
 
 // func main() {
-// 	exampleArray()
-
-// 	exampleSlice()
-
-// 	exampleMap()
+// 	mainCollections()
 // }
+
+func mainCollections() {
+	exampleArray()
+
+	exampleSlice()
+
+	exampleMap()
+}
 
 func exampleArray() {
 	fmt.Println("=== Array ===")

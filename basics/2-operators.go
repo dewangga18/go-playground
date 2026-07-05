@@ -3,14 +3,18 @@ package main
 import "fmt"
 
 // func main() {
-// 	exampleNumericOperation()
-
-// 	exampleUnaryOperator()
-
-// 	exampleComparisonOperator()
-
-// 	exampleLogicalOperator()
+// 	mainOperators()
 // }
+
+func mainOperators() {
+	exampleNumericOperation()
+
+	exampleUnaryOperator()
+
+	exampleComparisonOperator()
+
+	exampleLogicalOperator()
+}
 
 func exampleNumericOperation() {
 	fmt.Println("\n=== Numeric Operation ===")
