@@ -140,3 +140,7 @@ if errors.Is(err, ValidationError) {
 - `error` is a built-in interface, not a package. `errors` is the package for creating and working with errors.
 - `errors.New()` creates a simple error. For structured errors, implement the `Error()` interface on a custom struct.
 - `errors.Is()` is preferred over `==` because it unwraps the error chain and works with wrapped errors.
+
+---
+
+> **Note:** There may be other packages I haven't documented here. For the full list, check out the [Go Standard Library Docs](https://pkg.go.dev/std).

@@ -5,9 +5,9 @@ import (
 	"errors"
 )
 
-func main() {
-	mainErrors()
-}
+// func main() {
+// 	mainErrors()
+// }
 
 func mainErrors() {
 	err := getById("")
