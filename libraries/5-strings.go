@@ -5,9 +5,9 @@ import(
 	"strings"
 )
 
-func main() {
-	mainStrings()
-}
+// func main() {
+// 	mainStrings()
+// }
 
 func mainStrings() {
 	s := "hello string"

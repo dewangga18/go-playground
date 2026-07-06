@@ -62,22 +62,50 @@ import "strconv"
 
 | Function | Description |
 |----------|-------------|
+| `Atoi()` | Converts `string` to `int` — returns `(int, error)` |
 | `Itoa()` | Converts `int` to `string` |
-| `Atoi()` | Converts `string` to `int` |
-| `ParseBool()` | Converts `string` to `bool` |
-| `ParseFloat()` | Converts `string` to `float64` |
+| `ParseBool()` | Converts `string` to `bool` — returns `(bool, error)`. Accepts `"1"`, `"t"`, `"T"`, `"TRUE"`, `"true"`, `"True"`, `"0"`, `"f"`, `"F"`, `"FALSE"`, `"false"`, `"False"` |
+| `FormatBool()` | Converts `bool` to `string` — returns `"true"` or `"false"` |
+| `ParseFloat()` | Converts `string` to `float64` — returns `(float64, error)`. Second param is bitSize (`32` or `64`) |
+| `FormatFloat()` | Converts `float64` to `string` with formatting — params: `(value, fmt byte, prec int, bitSize int)` |
 
 **Example:**
 
 ```go
-number := 10
-text := strconv.Itoa(number)
-fmt.Println(text)
+// ParseBool — string to bool
+result, err := strconv.ParseBool("true")
+fmt.Println(result)      // true
+
+parseBool := strconv.FormatBool(result)
+fmt.Println(parseBool)   // true
+
+// Atoi / Itoa — string/int conversion
+num, _ := strconv.Atoi("123")
+fmt.Println(num)         // 123
+
+text := strconv.Itoa(123)
+fmt.Println(text)        // "123"
+
+// ParseFloat / FormatFloat — float conversion
+f, _ := strconv.ParseFloat("123.45", 64)
+fmt.Println(f)           // 123.45
+
+formatted := strconv.FormatFloat(f, 'f', 2, 64)
+fmt.Println(formatted)   // 123.45
 ```
 
+**FormatFloat format byte (`fmt`) options:**
+
+| Byte | Description | Example |
+|------|-------------|---------|
+| `'f'` | Decimal notation | `123.45` |
+| `'e'` | Scientific notation (lowercase) | `1.234500e+02` |
+| `'E'` | Scientific notation (uppercase) | `1.234500E+02` |
+
 **Notes:**
-- `Itoa` = **Integer to ASCII**
-- `Atoi` = **ASCII to Integer**
+- `Itoa` = **Integer to ASCII**, `Atoi` = **ASCII to Integer**
+- `ParseBool()` is **case-insensitive** — accepts `"true"`, `"TRUE"`, `"True"`, `"t"`, `"1"`, etc.
+- `Parse` functions return `(value, error)` — always check the error. `Format` functions return just `string` (no error).
 
 ---
 
