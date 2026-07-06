@@ -207,4 +207,40 @@ if err != nil {
 
 ---
 
+### `flag` — Command-Line Flag Parsing
+
+```go
+import "flag"
+```
+
+**Functions used:**
+
+| Function | Description |
+|----------|-------------|
+| `String()` | Declares a string flag with name, default value, and description |
+| `Int()` | Declares an integer flag with name, default value, and description |
+| `Parse()` | Parses the command-line flags — call after declaring all flags |
+
+**Example:**
+
+```go
+host := flag.String("host", "localhost", "host description")
+port := flag.Int("port", 8080, "port description")
+user := flag.String("user", "admin", "user description")
+password := flag.String("password", "123456", "password description")
+
+flag.Parse()
+
+fmt.Println("Host:", *host)
+fmt.Println("Port:", *port)
+fmt.Println("User:", *user)
+fmt.Println("Password:", *password)
+```
+
+Run with: `go run main.go -host=localhost -port=8080 -user=root -password=123456`
+
+> **Note:** `flag.String()` and `flag.Int()` return **pointers** — dereference with `*` to get the value. `flag.Parse()` must be called after declaring all flags and before accessing their values. Flags can be passed in any order — no need to match positional indexes like `os.Args`.
+
+---
+
 > **Note:** There may be other packages I haven't documented here. For the full list, check out the [Go Standard Library Docs](https://pkg.go.dev/std).

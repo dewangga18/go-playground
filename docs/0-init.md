@@ -31,6 +31,17 @@ go run ./libraries/3-os.go arg1 arg2
 - Arguments passed after the file are available via `os.Args`
 - `os.Args[0]` = the program path, `os.Args[1:]` = the actual arguments
 
+### With Flags (using `flag` package)
+
+```bash
+go run ./libraries/4-flag.go -host=localhost -port=8080 -user=root -password=123456
+```
+
+- Alternative to raw `os.Args` — parse named flags with `-key=value` syntax
+- Use `flag.String()`, `flag.Int()`, etc. to declare flags, then `flag.Parse()`
+- Flags can be passed in **any order** — no need to track positional indexes
+- See [`flag` package docs](/docs/0-standard-library.md#flag--command-line-flag-parsing) for details
+
 ## External Dependencies
 
 ### `go get`

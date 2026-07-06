@@ -6,11 +6,11 @@ import (
 	"github.com/joho/godotenv" // use `go get github.com/joho/godotenv` or `go mod tidy` to download this package
 )
 
-func main() {
-	mainOs()
-	mainEnv()
-	goDotEnv()
-}
+// func main() {
+// 	mainOs()
+// 	mainEnv()
+// 	goDotEnv()
+// }
 
 func mainOs() {
 	args := os.Args  // run with : go run libraries/3-os.go test argumen1 argumen2
