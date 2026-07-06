@@ -323,4 +323,81 @@ fmt.Println("'" + strings.TrimSpace(s2) + "'")   // 'password'
 
 ---
 
+### `math` — Math Operations
+
+```go
+import "math"
+```
+
+**Functions used:**
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `Abs()` | Absolute value | `Abs(-10.5)` → `10.5` |
+| `Max()` | Returns the larger of two values | `Max(10, 20)` → `20` |
+| `Min()` | Returns the smaller of two values | `Min(10, 20)` → `10` |
+| `Round()` | Rounds to nearest integer (half up) | `Round(3.6)` → `4` |
+| `Ceil()` | Rounds up | `Ceil(3.2)` → `4` |
+| `Floor()` | Rounds down | `Floor(3.8)` → `3` |
+| `Pow()` | Power (x^y) | `Pow(2, 3)` → `8` |
+| `Sqrt()` | Square root | `Sqrt(9)` → `3` |
+| `Mod()` | Modulo (like `%` but works with floats too) | `Mod(5, 2)` → `1`, `Mod(5.5, 2)` → `1.5` |
+
+**Constants:**
+
+| Constant | Value |
+|----------|-------|
+| `Pi` | `3.141592653589793` |
+
+**Example:**
+
+```go
+fmt.Println(math.Abs(-10.5))  // 10.5
+fmt.Println(math.Max(10, 20)) // 20
+fmt.Println(math.Min(10, 20)) // 10
+fmt.Println(math.Round(3.6))  // 4
+fmt.Println(math.Ceil(3.2))   // 4
+fmt.Println(math.Floor(3.8))  // 3
+fmt.Println(math.Pow(2, 3))   // 8
+fmt.Println(math.Sqrt(9))     // 3
+fmt.Println(math.Mod(5, 2))   // 1
+fmt.Println(math.Mod(5.5, 2)) // 1.5
+fmt.Println(math.Pi)          // 3.141592653589793
+```
+
+> **Note:** `math` functions work with `float64`. Use `Mod()` instead of `%` when working with floats — `%` only works with integers.
+
+---
+
+### `math/rand/v2` — Random Number Generation
+
+```go
+import "math/rand/v2"
+```
+
+**Functions used:**
+
+| Function | Description |
+|----------|-------------|
+| `Int()` | Returns a random `int` (non-negative) |
+| `IntN(n)` | Returns a random `int` in `[0, n)` |
+| `Float64()` | Returns a random `float64` in `[0.0, 1.0)` |
+
+**Example:**
+
+```go
+fmt.Println("Random Int:", rand.Int())       // e.g. 2470256555260306322
+fmt.Println("Random IntN (0-9):", rand.IntN(10)) // e.g. 4
+fmt.Println("Random Float:", rand.Float64())  // e.g. 0.4031342119625486
+
+// Random float in custom range [min, max)
+min := 10.0
+max := 20.0
+fmt.Println("Random FloatN:", rand.Float64()*(max-min)) // e.g. 3.5
+```
+
+> **Note:** `math/rand/v2` is the newer Go 1.22+ version of the rand package — uses different algorithms than the original `math/rand`. Functions like `IntN()` don't exist in `math/rand` — that version uses `Intn()` (lowercase 'n').
+
+---
+
 > **Note:** There may be other packages I haven't documented here. For the full list, check out the [Go Standard Library Docs](https://pkg.go.dev/std).
