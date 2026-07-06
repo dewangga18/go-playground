@@ -243,4 +243,56 @@ Run with: `go run main.go -host=localhost -port=8080 -user=root -password=123456
 
 ---
 
+---
+
+### `strings` — String Manipulation
+
+```go
+import "strings"
+```
+
+**Functions used:**
+
+| Function | Description |
+|----------|-------------|
+| `Contains()` | Checks if a string contains a substring |
+| `Count()` | Counts non-overlapping occurrences of a substring |
+| `Index()` | Returns the index of the first occurrence of a substring (-1 if not found) |
+| `Repeat()` | Repeats a string n times |
+| `Replace()` | Replaces the first n occurrences of a substring |
+| `ReplaceAll()` | Replaces all occurrences of a substring |
+| `Split()` | Splits a string by a separator into a slice |
+| `Title()` | Converts each word to title case (first letter uppercase) |
+| `ToLower()` | Converts to lowercase |
+| `ToUpper()` | Converts to uppercase |
+| `HasPrefix()` | Checks if a string starts with a prefix |
+| `HasSuffix()` | Checks if a string ends with a suffix |
+| `TrimSpace()` | Removes leading and trailing whitespace |
+
+**Example:**
+
+```go
+s := "hello string"
+
+fmt.Println(strings.Contains(s, "string"))   // true
+fmt.Println(strings.Count(s, "l"))             // 2
+fmt.Println(strings.Index(s, "string"))        // 6
+fmt.Println(strings.Repeat("ha", 5))           // hahahahaha
+fmt.Println(strings.Replace(s, "o", "x", 1))   // hellx string
+fmt.Println(strings.ReplaceAll(s, "o", "x"))   // hellx string
+fmt.Println(strings.Split(s, "o"))             // [hell  string]
+fmt.Println(strings.Title(s))                  // Hello String
+fmt.Println(strings.ToLower("HELLO"))          // hello
+fmt.Println(strings.ToUpper("hello"))          // HELLO
+fmt.Println(strings.HasPrefix(s, "hello"))     // true
+fmt.Println(strings.HasSuffix(s, "string"))    // true
+
+s2 := "      password          "
+fmt.Println("'" + strings.TrimSpace(s2) + "'")   // 'password'
+```
+
+> **Note:** Strings are **immutable** in Go — all `strings` functions return a **new string**, they never modify the original.
+
+---
+
 > **Note:** There may be other packages I haven't documented here. For the full list, check out the [Go Standard Library Docs](https://pkg.go.dev/std).
