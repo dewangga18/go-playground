@@ -143,4 +143,68 @@ if errors.Is(err, ValidationError) {
 
 ---
 
+### `os` — Operating System
+
+```go
+import "os"
+```
+
+**Functions used:**
+
+| Function | Description |
+|----------|-------------|
+| `Args` | Command-line arguments (variable) — returns `[]string` |
+| `Hostname()` | Returns the hostname of the machine |
+| `Getenv()` | Gets an environment variable by key (returns empty string if missing) |
+| `LookupEnv()` | Gets an env var with a boolean indicating if it exists |
+| `Setenv()` | Sets an environment variable |
+| `Unsetenv()` | Unsets/deletes an environment variable |
+| `Environ()` | Returns all environment variables as `[]string` in `"KEY=VALUE"` format |
+
+**Example — Command-Line Arguments:**
+
+```go
+args := os.Args
+
+fmt.Println("Arguments:", len(args))
+for i, arg := range args {
+    fmt.Println("Index:", i, "Arg:", arg)
+}
+```
+
+Run with: `go run main.go arg1 arg2`
+
+**Example — Environment Variables:**
+
+```go
+e := os.Getenv("SAMPLE_ENV")
+fmt.Println("SAMPLE_ENV:", e)
+
+value, isExist := os.LookupEnv("SAMPLE_ENV")
+fmt.Println("Value:", value, "Exists:", isExist)
+
+os.Setenv("SAMPLE_ENV", "hi_env")
+value, isExist = os.LookupEnv("SAMPLE_ENV")
+fmt.Println("Value:", value, "Exists:", isExist)
+
+os.Unsetenv("SAMPLE_ENV")
+value, isExist = os.LookupEnv("SAMPLE_ENV")
+fmt.Println("Value:", value, "Exists:", isExist)
+```
+
+**Example — Hostname:**
+
+```go
+host, err := os.Hostname()
+if err != nil {
+    fmt.Println("Error:", err)
+} else {
+    fmt.Println("Hostname:", host)
+}
+```
+
+> **Note:** `Args[0]` is the program name itself — actual arguments start at `Args[1]`. Use `LookupEnv()` when you need to distinguish between an empty env var and a missing one.
+
+---
+
 > **Note:** There may be other packages I haven't documented here. For the full list, check out the [Go Standard Library Docs](https://pkg.go.dev/std).
