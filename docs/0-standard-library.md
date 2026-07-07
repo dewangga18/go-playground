@@ -682,4 +682,89 @@ Value 2
 
 ---
 
+### `sort` — Slice Sorting
+
+```go
+import "sort"
+```
+
+**Functions used:**
+
+| Function | Description |
+|----------|-------------|
+| `Ints(slice)` | Sorts `[]int` in-place (ascending) |
+| `Strings(slice)` | Sorts `[]string` in-place (ascending) |
+| `Float64s(slice)` | Sorts `[]float64` in-place (ascending) |
+| `Sort(data)` | Sorts any slice that implements `sort.Interface` (`Len`, `Less`, `Swap`) |
+| `Slice(slice, less)` | Sorts any slice using a `less` function — no need to implement `sort.Interface` |
+| `Reverse(data)` | Wraps a `sort.Interface` to sort in **descending** order — use with `sort.Sort()` |
+
+**Type adapters (implement `sort.Interface`):**
+
+| Type | For sorting |
+|------|-------------|
+| `sort.IntSlice` | `[]int` |
+| `sort.StringSlice` | `[]string` |
+| `sort.Float64Slice` | `[]float64` |
+
+**Example — built-in types:**
+
+```go
+ages := []int{10, 20, 30, 5, 15}
+sort.Ints(ages)
+fmt.Println(ages)      // [5 10 15 20 30]
+
+// Reverse
+sort.Sort(sort.Reverse(sort.IntSlice(ages)))
+fmt.Println(ages)      // [30 20 15 10 5]
+
+names := []string{"John", "Doe", "Jane", "Bob"}
+sort.Strings(names)
+fmt.Println(names)     // [Bob Doe Jane John]
+
+floats := []float64{1.0, 2.0, 3.0, 5.0, 1.5}
+sort.Float64s(floats)
+fmt.Println(floats)    // [1 1.5 2 3 5]
+```
+
+**Example — slice of structs (2 ways):**
+
+**Way 1: Implement `sort.Interface`**
+
+```go
+type User struct {
+    Name string
+    Age  string
+}
+
+type UserSlice []User
+
+func (u UserSlice) Len() int           { return len(u) }
+func (u UserSlice) Less(i, j int) bool { return u[i].Age < u[j].Age }
+func (u UserSlice) Swap(i, j int)      { u[i], u[j] = u[j], u[i] }
+
+users := []User{
+    {"John", "20"},
+    {"Doe", "25"},
+    {"Jane", "22"},
+    {"Bob", "28"},
+}
+
+sort.Sort(UserSlice(users))
+fmt.Println(users)     // [{John 20} {Jane 22} {Doe 25} {Bob 28}]
+```
+
+**Way 2: `sort.Slice` — simpler, no interface needed**
+
+```go
+sort.Slice(users, func(i, j int) bool {
+    return users[i].Age < users[j].Age
+})
+fmt.Println(users)     // [{John 20} {Jane 22} {Doe 25} {Bob 28}]
+```
+
+> **Note:** `sort.Ints()`, `sort.Strings()`, `sort.Float64s()` modify the slice **in-place** — no return value. For custom types, `sort.Slice()` is more convenient than implementing `sort.Interface`. Both sort by `Age` as string (lexicographic order since `Age` is `string`).
+
+---
+
 > **Note:** There may be other packages I haven't documented here. For the full list, check out the [Go Standard Library Docs](https://pkg.go.dev/std).

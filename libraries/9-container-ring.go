@@ -6,9 +6,9 @@ import (
 	"strconv"
 )
 
-func main() {
-	mainRing()
-}
+// func main() {
+// 	mainRing()
+// }
 
 func mainRing() {
 	r := ring.New(5)
