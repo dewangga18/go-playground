@@ -571,4 +571,115 @@ for stack.Len() > 0 {
 
 ---
 
+### `container/ring` — Circular List
+
+```go
+import "container/ring"
+```
+
+Circular ring — like a list that wraps around. **No start or end.** The `*Ring` pointer always points to "current" position, and you move with `Next()`/`Prev()` or `Move(n)`.
+
+**Functions used:**
+
+| Function | Description |
+|----------|-------------|
+| `ring.New(n)` | Creates a new ring with `n` zero-valued elements |
+| `Len()` | Returns the number of elements in the ring |
+| `Do(fn)` | Calls `fn` on every element — iterates forward from current position |
+| `Move(n)` | Moves the ring pointer forward (`n > 0`) or backward (`n < 0`) — returns new `*Ring` |
+| `Link(r)` | Links another ring `r` after the current element — merges two rings |
+| `Unlink(n)` | Removes `n` elements after the current element (not including current) |
+
+**Element field:**
+
+| Field | Description |
+|-------|-------------|
+| `.Value` | The value stored in the element (`any`) — type-assert as needed |
+
+**Example:**
+
+```go
+r := ring.New(5)
+
+// Populate ring
+for i := 0; i < r.Len(); i++ {
+    r.Value = "Value " + strconv.Itoa(i+1)
+    r = r.Next()
+}
+
+// Print all
+r.Do(func(i any) {
+    fmt.Println(i)           // Value 1, Value 2, ..., Value 5
+})
+
+// Move 2 positions forward
+r = r.Move(2)
+r.Do(func(i any) {
+    fmt.Println(i)           // Value 3, Value 4, Value 5, Value 1, Value 2
+})
+
+// Link — merge another ring
+r2 := ring.New(2)
+r2.Value = "Value 6"
+r2.Next().Value = "Value 7"
+r.Link(r2)                   // inserts r2's elements after current position
+r.Do(func(i any) {
+    fmt.Println(i)           // Value 3, Value 6, Value 7, Value 4, Value 5, Value 1, Value 2
+})
+
+// Unlink — remove n elements after current
+r.Unlink(1)                  // removes the element after current (Value 6)
+r.Do(func(i any) {
+    fmt.Println(i)           // Value 3, Value 7, Value 4, Value 5, Value 1, Value 2
+})
+```
+
+**Full output:**
+
+```
+Value 1
+Value 2
+Value 3
+Value 4
+Value 5
+
+Move 2
+Value 3
+Value 4
+Value 5
+Value 1
+Value 2
+
+Link
+Value 3
+Value 6
+Value 7
+Value 4
+Value 5
+Value 1
+Value 2
+
+Unlink
+Value 3
+Value 7
+Value 4
+Value 5
+Value 1
+Value 2
+```
+
+> **Note:** Unlike `container/list`, `container/ring` has **no zero-value**. Must create with `ring.New(n)`. The ring always has a current position — operations like `Link()` and `Unlink()` happen relative to that position. `Unlink()` does **not** remove the current element, only elements after it.
+
+**When to use `container/ring`:**
+
+| Scenario | Use | Why |
+|----------|-----|-----|
+| Fixed-size buffer (overwrite oldest) | `container/ring` | Circular — no need to track head/tail manually |
+| Round-robin scheduler | `container/ring` | `Move(n)` advances to next participant naturally |
+| Something simpler? | **Slice with index** | Rings are niche. Most cases work fine with a slice + modulo index |
+
+> **TL;DR:** Rings are niche. Only reach for this when you truly need a circular buffer — else slice + `%` index is simpler.
+
+---
+
 > **Note:** There may be other packages I haven't documented here. For the full list, check out the [Go Standard Library Docs](https://pkg.go.dev/std).

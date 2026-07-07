@@ -5,9 +5,9 @@ import(
 	"fmt"
 )
 
-func main() {
-	mainList()
-}
+// func main() {
+// 	mainList()
+// }
 
 func mainList() {
 	l := list.New()
