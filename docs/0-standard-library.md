@@ -1821,3 +1821,363 @@ fmt.Println("Current dir:", cwd)    // /Users/admin/Documents/golang-playground
 ```
 
 > **Note:** `WalkDir` was added in Go 1.16 — faster than the older `filepath.Walk` because it avoids `os.Stat` calls (uses `fs.DirEntry` directly from the OS). Always check the `err` parameter in the WalkDir callback — errors don't stop the walk automatically, you must return `nil` to skip or return the error to stop. `Glob` with `**` (double star) matches zero or more directory levels — supported since Go 1.16.
+
+---
+
+### `io` — I/O Primitives & Utilities
+
+```go
+import "io"
+```
+
+The `io` package provides fundamental **interfaces** (`Reader`, `Writer`) and **utility functions** for I/O data streams. These are the building blocks for all I/O in Go.
+
+**Core interfaces (the foundation of all Go I/O):**
+
+| Interface | Method | Description |
+|-----------|--------|-------------|
+| `io.Reader` | `Read(p []byte) (n int, err error)` | Reads up to `len(p)` bytes into `p`. Returns `io.EOF` when done — **the most important interface in Go** |
+| `io.Writer` | `Write(p []byte) (n int, err error)` | Writes `len(p)` bytes from `p`. Returns `n < len(p)` on error |
+
+> `io.Reader` and `io.Writer` are **everywhere** — `os.File`, `bytes.Buffer`, `strings.Reader`, `http.Response.Body`, `net.Conn` — they all implement these interfaces, making any stream of data interchangeable in Go.
+
+**Utility functions:**
+
+| Function | Description |
+|----------|-------------|
+| `ReadAll(r)` | Reads all data from `r` until EOF — returns `([]byte, error)`. Convenient for small data |
+| `Copy(dst, src)` | Copies data from `src` **Reader** to `dst` **Writer** until EOF — returns `(int64, error)` |
+| `CopyN(dst, src, n)` | Copies exactly `n` bytes from `src` Reader to `dst` Writer — stops early on EOF |
+| `MultiWriter(writers...)` | Returns a **Writer** that duplicates writes to all provided writers simultaneously |
+| `TeeReader(r, w)` | Returns a **Reader** that writes everything read from `r` to `w` (like Unix `tee` command) |
+
+**Special writers:**
+
+| Writer | Description |
+|--------|-------------|
+| `io.Discard` | A Writer that **discards all data** — Go's `/dev/null`. All writes succeed silently |
+
+**Example — io.Reader (read in chunks):**
+
+```go
+reader := strings.NewReader("Hello, Golang io!")
+buf := make([]byte, 8)
+
+for {
+    n, err := reader.Read(buf)
+    fmt.Printf("read %d bytes: %q\n", n, buf[:n])
+    if err == io.EOF {
+        break
+    }
+}
+// read 8 bytes: "Hello, G"
+// read 8 bytes: "olang io"
+// read 1 bytes: "!"
+// read 0 bytes: ""
+```
+
+**Example — io.Writer (write to buffer):**
+
+```go
+var bufWriter bytes.Buffer
+n, _ := bufWriter.Write([]byte("Hello, Writer!"))
+fmt.Printf("Wrote %d bytes: %q\n", n, bufWriter.String()) // 14, "Hello, Writer!"
+
+bufWriter.Write([]byte(" More data."))
+fmt.Printf("%q\n", bufWriter.String())                    // "Hello, Writer! More data."
+```
+
+**Example — Custom Reader/Writer (implementing the interfaces):**
+
+```go
+// Custom Reader — uppercases everything on read
+type UpperCaseReader struct {
+    data string
+    pos  int
+}
+
+func (u *UpperCaseReader) Read(p []byte) (int, error) {
+    if u.pos >= len(u.data) {
+        return 0, io.EOF
+    }
+    if u.pos == 0 {
+        u.data = strings.ToUpper(u.data)  // uppercase on first call
+    }
+    n := copy(p, u.data[u.pos:])
+    u.pos += n
+    if u.pos >= len(u.data) {
+        return n, io.EOF
+    }
+    return n, nil
+}
+
+// Custom Writer — uppercases before writing
+type UpperCaseWriter struct {
+    buf bytes.Buffer
+}
+
+func (w *UpperCaseWriter) Write(p []byte) (int, error) {
+    return w.buf.Write([]byte(strings.ToUpper(string(p))))
+}
+```
+
+**Example — ReadAll:**
+
+```go
+data, _ := io.ReadAll(strings.NewReader("Read me entirely!"))
+fmt.Printf("%q (%d bytes)\n", string(data), len(data)) // "Read me entirely!" (17 bytes)
+
+emptyData, _ := io.ReadAll(strings.NewReader(""))
+fmt.Printf("%q\n", string(emptyData))                   // ""
+```
+
+**Example — Copy & CopyN:**
+
+```go
+// Copy all — reader to writer
+var dst bytes.Buffer
+written, _ := io.Copy(&dst, strings.NewReader("Data to copy"))
+fmt.Printf("%d bytes: %q\n", written, dst.String())    // 12, "Data to copy"
+
+// CopyN — exactly N bytes (remaining stays in source)
+var dst2 bytes.Buffer
+io.CopyN(&dst2, strings.NewReader("Long data string..."), 10)
+fmt.Println(dst2.String())                               // "Long data "
+
+// Discard — send data to /dev/null
+io.Copy(io.Discard, strings.NewReader("gone forever"))
+```
+
+**Example — MultiWriter (fan-out):**
+
+```go
+var buf1, buf2 bytes.Buffer
+mw := io.MultiWriter(&buf1, &buf2)
+
+mw.Write([]byte("Multi-writer test"))
+fmt.Println(buf1.String())  // "Multi-writer test"
+fmt.Println(buf2.String())  // "Multi-writer test"
+
+// Also works with io.Copy — tee to multiple destinations
+var log1, log2 bytes.Buffer
+io.Copy(io.MultiWriter(&log1, &log2), strings.NewReader("Log entry"))
+
+// MultiWriter with io.Discard — log to buffer AND discard
+var logger bytes.Buffer
+mwDiscard := io.MultiWriter(&logger, io.Discard)
+mwDiscard.Write([]byte("Only logger sees this"))
+```
+
+**Example — TeeReader (read + write simultaneously, like Unix `tee`):**
+
+```go
+var teeBuf bytes.Buffer
+teeReader := io.TeeReader(
+    strings.NewReader("Tee reader test data"),
+    &teeBuf,
+)
+
+result, _ := io.ReadAll(teeReader)
+fmt.Printf("Read: %q\n", string(result))       // "Tee reader test data"
+fmt.Printf("Teed: %q\n", teeBuf.String())      // "Tee reader test data"
+
+// Practical: TeeReader + MultiWriter — log and audit simultaneously
+var processLog, auditLog bytes.Buffer
+auditReader := io.TeeReader(
+    strings.NewReader("audit trail entry"),
+    io.MultiWriter(&processLog, &auditLog),
+)
+io.ReadAll(auditReader)
+fmt.Println(processLog.String())                 // "audit trail entry"
+fmt.Println(auditLog.String())                   // "audit trail entry"
+```
+
+**Example — io.Discard (Go's `/dev/null`):**
+
+```go
+n, _ := io.Discard.Write([]byte("gone forever"))
+fmt.Printf("Wrote %d bytes — all discarded\n", n) // 12
+```
+
+> **Key insight:** `io.Reader` and `io.Writer` are the **most important interfaces in Go**. Everything connects through them: files, network connections, HTTP bodies, compression, encryption, buffers. When you write a function that takes or returns `io.Reader`/`io.Writer`, your code works with **any** data source/sink. `strings.NewReader(s)`, `bytes.NewReader(b)`, and `bytes.Buffer` all implement `io.Reader` — use them to turn strings/bytes into streams for testing.
+
+**Common types that implement `io.Reader` / `io.Writer`:**
+
+| Type | Implements |
+|------|-----------|
+| `os.File` | `Reader` + `Writer` |
+| `bytes.Buffer` | `Reader` + `Writer` |
+| `strings.Reader` | `Reader` |
+| `http.Response.Body` | `Reader` |
+| `net.Conn` | `Reader` + `Writer` |
+| `gzip.Reader` / `gzip.Writer` | `Reader` / `Writer` |
+| `cipher.StreamReader` / `StreamWriter` | `Reader` / `Writer` |
+| `io.PipeReader` / `io.PipeWriter` | `Reader` / `Writer` |
+
+> **Pipeline pattern:** You can chain Readers/Writers — `gzip.NewReader(encryptedReader)` wraps one Reader with another. This composability is why `io.Reader`/`io.Writer` interfaces are the heart of Go's I/O design.
+
+---
+
+### `bufio` — Buffered I/O
+
+```go
+import "bufio"
+```
+
+Wraps an `io.Reader` or `io.Writer` with an **internal buffer** (default 4096 bytes) to reduce system calls and improve performance. Essential for reading/writing files, network connections, and user input.
+
+**Functions / Constructors used:**
+
+| Function | Description |
+|----------|-------------|
+| `NewReader(r)` | Creates a buffered `Reader` from any `io.Reader` — default buffer size 4096 |
+| `.ReadString(delim)` | Reads until `delim` is found — returns the **string** including the delimiter. Returns `""` with `io.EOF` if no more data |
+| `.ReadBytes(delim)` | Same as `ReadString` but returns `[]byte` instead of string |
+| `NewScanner(r)` | Creates a `Scanner` for tokenized reading — splits by newline by default |
+| `.Split(splitFunc)` | Changes how the `Scanner` splits input — e.g. `ScanWords`, `ScanBytes`, `ScanRunes` |
+| `NewWriter(w)` | Creates a buffered `Writer` from any `io.Writer` — must call `.Flush()` to write data! |
+| `.WriteString(s)` | Writes a string to the buffered writer (more efficient than `Write([]byte(s))`) |
+| `.Flush()` | **Writes buffered data** to the underlying writer — **must call** after all writes! |
+
+**Built-in split functions for Scanner:**
+
+| Function | Description |
+|----------|-------------|
+| `bufio.ScanLines` | Split by newlines — **default for Scanner** |
+| `bufio.ScanWords` | Split by whitespace — gives individual words |
+| `bufio.ScanBytes` | Split by individual bytes — each `Scan()` returns one byte |
+| `bufio.ScanRunes` | Split by individual runes — handles multi-byte UTF-8 correctly |
+
+**Example — NewReader & ReadString (buffered reading):**
+
+```go
+reader := bufio.NewReader(strings.NewReader("Hello, buffered world!"))
+b, _ := reader.ReadByte()
+fmt.Printf("First byte: %c\n", b)             // H
+
+peekBuf, _ := reader.Peek(5)
+fmt.Printf("Peek next 5: %q\n", string(peekBuf)) // "ello,"
+
+line1, _ := reader.ReadString(' ')
+fmt.Printf("ReadString: %q\n", line1)          // "ello, "
+
+// ReadString with newline delimiter
+data := "name=Budi\nage=25\ncity=Jakarta\n"
+sc := bufio.NewReader(strings.NewReader(data))
+for {
+    line, err := sc.ReadString('\n')
+    fmt.Printf("Line: %q", line)
+    if err != nil {
+        fmt.Println(" (EOF)")
+        break
+    }
+    fmt.Println()
+}
+// Line: "name=Budi\n"
+// Line: "age=25\n"
+// Line: "city=Jakarta\n"
+// Line: "" (EOF)
+```
+
+**Example — ReadBytes (reads until delimiter, returns []byte):**
+
+```go
+data := "a,b,c,d,e"
+br := bufio.NewReader(strings.NewReader(data))
+
+for {
+    chunk, err := br.ReadBytes(',')
+    if err != nil {
+        fmt.Printf("Chunk (last): %q\n", string(chunk))
+        break
+    }
+    fmt.Printf("Chunk: %q\n", string(chunk))
+}
+// Chunk: "a,"  Chunk: "b,"  Chunk: "c,"  Chunk: "d,"  Chunk (last): "e"
+```
+
+**Example — Scanner (read lines):**
+
+```go
+text := "line one\nline two\nline three\n"
+scanner := bufio.NewScanner(strings.NewReader(text))
+for scanner.Scan() {
+    fmt.Println(scanner.Text())  // line one, line two, line three (no trailing \n)
+}
+if err := scanner.Err(); err != nil {
+    log.Fatal(err)
+}
+```
+
+**Example — ScanWords & other split functions:**
+
+```go
+sentence := "Go is awesome and fast!"
+wordScanner := bufio.NewScanner(strings.NewReader(sentence))
+wordScanner.Split(bufio.ScanWords)
+
+for wordScanner.Scan() {
+    fmt.Println(wordScanner.Text())
+}
+// Go, is, awesome, and, fast!
+
+// ScanBytes — individual bytes
+byteScanner.Split(bufio.ScanBytes)
+
+// ScanRunes — handles multi-byte UTF-8 correctly
+runeScanner.Split(bufio.ScanRunes)
+```
+
+**Example — NewWriter & Flush (buffered writing):**
+
+```go
+var buf bytes.Buffer
+writer := bufio.NewWriter(&buf)
+
+writer.Write([]byte("Hello "))
+writer.Write([]byte("World"))
+writer.Write([]byte("!"))
+
+fmt.Printf("Before Flush: %q\n", buf.String())  // "" (empty!)
+
+writer.Flush()
+fmt.Printf("After Flush: %q\n", buf.String())   // "Hello World!"
+```
+
+**Example — WriteString (write string efficiently):**
+
+```go
+var buf bytes.Buffer
+w := bufio.NewWriter(&buf)
+
+w.WriteString("This is a string!")
+w.WriteString(" Another string.")
+w.Flush()
+fmt.Println(buf.String())  // "This is a string! Another string."
+```
+
+**Example — Practical: read file line by line:**
+
+```go
+file, _ := os.Open("file.txt")
+defer file.Close()
+
+scanner := bufio.NewScanner(file)
+for scanner.Scan() {
+    fmt.Println(scanner.Text())
+}
+```
+
+**Example — Practical: write to file with buffered writer:**
+
+```go
+f, _ := os.Create("output.txt")
+w := bufio.NewWriter(f)
+w.WriteString("line 1\n")
+w.WriteString("line 2\n")
+w.WriteString("line 3\n")
+w.Flush()
+f.Close()
+```
+
+> **Important:** The buffer is **empty until you call `Flush()`** — data accumulates in memory. Always call `Flush()` after writing, or use `defer writer.Flush()`. For `Scanner`, always check `scanner.Err()` after the loop — the loop stops on both EOF AND errors. `Scanner.Text()` returns the line **without** the trailing newline (unlike `ReadString` which includes the delimiter).
