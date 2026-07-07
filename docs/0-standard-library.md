@@ -400,4 +400,127 @@ fmt.Println("Random FloatN:", rand.Float64()*(max-min)) // e.g. 3.5
 
 ---
 
+### `container/list` — Doubly-Linked List
+
+```go
+import "container/list"
+```
+
+**Functions used:**
+
+| Function | Description |
+|----------|-------------|
+| `list.New()` | Creates a new empty doubly-linked list |
+| `PushBack(v)` | Adds an element to the back of the list |
+| `PushFront(v)` | Adds an element to the front of the list |
+| `Front()` | Returns the first element (`*Element`) — `nil` if empty |
+| `Back()` | Returns the last element (`*Element`) — `nil` if empty |
+| `Len()` | Returns the number of elements in the list |
+| `InsertBefore(v, mark)` | Inserts a new element before the given element |
+| `InsertAfter(v, mark)` | Inserts a new element after the given element |
+| `MoveBefore(e, mark)` | Moves an existing element before another |
+| `MoveAfter(e, mark)` | Moves an existing element after another |
+| `Remove(e)` | Removes an element from the list |
+
+**Element fields:**
+
+| Field | Description |
+|-------|-------------|
+| `.Value` | The value stored in the element (`any`) — type-assert as needed |
+| `.Next()` | Returns the next element or `nil` |
+| `.Prev()` | Returns the previous element or `nil` |
+
+**Example:**
+
+```go
+l := list.New()
+l.PushBack("B")
+l.PushBack("C")
+l.PushBack("D")
+l.PushFront("A")
+
+fmt.Println("Length:", l.Len())     // 4
+
+// Iterate forward
+for e := l.Front(); e != nil; e = e.Next() {
+    fmt.Println(e.Value)            // A, B, C, D
+}
+
+// Iterate backward
+for e := l.Back(); e != nil; e = e.Prev() {
+    fmt.Println(e.Value)            // D, C, B, A
+}
+
+k := list.New()
+k.PushBack(1)
+k.PushBack(2)
+
+// Insert before / after
+a := k.PushBack(4)
+k.InsertBefore(3, a)
+b := k.PushBack(5)
+k.InsertAfter(6, b)                  // 1, 2, 3, 4, 5, 6
+
+// Move elements
+first := k.PushFront(0)
+k.MoveBefore(first, k.Front())       // moves 0 before itself (no-op effectively)
+
+last := k.PushBack(7)
+k.MoveAfter(last, k.Back())          // moves 7 after itself (no-op effectively)
+
+// Remove elements
+k.Remove(k.Front())                  // removes first element
+```
+
+**Full output:**
+
+```
+Length: 4
+Iteration Forward
+A
+B
+C
+D
+Iteration Backward
+D
+C
+B
+A
+1
+2
+3
+4
+5
+6
+move before function
+0
+1
+2
+3
+4
+5
+6
+move after function
+0
+1
+2
+3
+4
+5
+6
+7
+remove function
+1
+2
+3
+4
+5
+6
+7
+```
+
+> **Important:** `container/list` is **pointer-based**. Elements are accessed via `*Element` pointers (`Next()`, `Prev()`, `Front()`, `Back()`). There's no built-in way to deep-copy or clone a list — the only way is to iterate through the original and build a new one with `PushBack()`/`PushFront()`.
+
+---
+
 > **Note:** There may be other packages I haven't documented here. For the full list, check out the [Go Standard Library Docs](https://pkg.go.dev/std).

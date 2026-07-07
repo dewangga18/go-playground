@@ -6,9 +6,9 @@ import (
 	"math/rand/v2"
 )
 
-func main() {
-	mainMath()
-}
+// func main() {
+// 	mainMath()
+// }
 
 func mainMath() {
 	basicOperation()
