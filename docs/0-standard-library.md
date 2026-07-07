@@ -1527,3 +1527,148 @@ fmt.Println(isValidHex("xyz"))     // false
 ```
 
 > **Note:** Hex encoding doubles the string length — each byte becomes 2 hex characters. Use `hex.DecodeString()` with error checking to validate hex input (there's no built-in `ValidString` — just decode and check the error).
+
+---
+
+### `slices` — Slice Operations (Go 1.21+)
+
+```go
+import "slices"
+```
+
+Generic slice utilities — works with any element type. No more writing manual loops for common operations.
+
+**Functions used:**
+
+| Function | Description |
+|----------|-------------|
+| `Contains(s, v)` | Returns `true` if `v` exists in slice `s` |
+| `Index(s, v)` | Returns the first index of `v` in `s`, or `-1` if not found |
+| `Equal(s1, s2)` | Returns `true` if both slices have the same length and equal elements |
+| `Clone(s)` | Returns an **independent copy** of the slice — modifying clone doesn't affect original |
+| `Sort(s)` | Sorts slice in ascending order (in-place) — works with `int`, `string`, `float64`, etc. |
+| `SortFunc(s, cmp)` | Sorts slice with a custom comparator — `cmp(a, b T) int` returns `-1`, `0`, or `1` |
+| `Reverse(s)` | Reverses slice **in-place** — no return value |
+| `Insert(s, i, v...)` | Returns a new slice with elements inserted at index `i` |
+| `Delete(s, i, j)` | Returns a new slice with elements `[i:j)` removed |
+| `Replace(s, i, j, v...)` | Returns a new slice with elements `[i:j)` replaced by new values |
+| `Compact(s)` | Removes **adjacent** duplicates (in-place in the underlying array, returns a sub-slice) |
+
+**Example — Contains & Index:**
+
+```go
+numbers := []int{10, 20, 30, 40, 50}
+slices.Contains(numbers, 30)   // true
+slices.Contains(numbers, 99)   // false
+slices.Index(numbers, 30)      // 2
+slices.Index(numbers, 99)      // -1
+
+names := []string{"Budi", "Sari", "Agus"}
+slices.Contains(names, "Sari") // true
+```
+
+**Example — Equal & Clone:**
+
+```go
+a := []int{1, 2, 3}
+b := []int{1, 2, 3}
+slices.Equal(a, b)             // true
+
+original := []int{1, 2, 3}
+clone := slices.Clone(original)
+clone[0] = 99
+fmt.Println(original)          // [1 2 3] — original unchanged
+fmt.Println(clone)             // [99 2 3]
+```
+
+**Example — Sort & Reverse:**
+
+```go
+unsorted := []int{5, 2, 8, 1, 9, 3}
+slices.Sort(unsorted)
+fmt.Println(unsorted)          // [1 2 3 5 8 9]
+
+slices.Reverse(unsorted)
+fmt.Println(unsorted)          // [9 8 5 3 2 1]
+```
+
+**Example — SortFunc (custom comparator):**
+
+```go
+type Person struct {
+    Name string
+    Age  int
+}
+
+people := []Person{
+    {"Budi", 30},
+    {"Sari", 25},
+    {"Agus", 35},
+    {"Dewi", 28},
+}
+
+// Sort by age ascending
+slices.SortFunc(people, func(a, b Person) int {
+    if a.Age < b.Age { return -1 }
+    if a.Age > b.Age { return 1 }
+    return 0
+})
+fmt.Println(people)            // [{Sari 25} {Dewi 28} {Budi 30} {Agus 35}]
+
+// Sort by name descending
+slices.SortFunc(people, func(a, b Person) int {
+    if a.Name > b.Name { return -1 }
+    if a.Name < b.Name { return 1 }
+    return 0
+})
+fmt.Println(people)            // [{Sari 25} {Dewi 28} {Budi 30} {Agus 35}]
+```
+
+**Example — Insert, Delete, Replace:**
+
+```go
+// Insert at index (returns new slice)
+inserted := []int{1, 2, 5, 6}
+inserted = slices.Insert(inserted, 2, 3, 4)
+fmt.Println(inserted)          // [1 2 3 4 5 6]
+
+// Insert at beginning
+inserted = slices.Insert(inserted, 0, 0)
+fmt.Println(inserted)          // [0 1 2 3 4 5 6]
+
+// Insert at end (like append)
+inserted = slices.Insert(inserted, len(inserted), 7)
+fmt.Println(inserted)          // [0 1 2 3 4 5 6 7]
+
+// Delete [i:j) — removes elements from i to j-1
+deleted := []int{0, 1, 2, 3, 4, 5, 6, 7}
+deleted = slices.Delete(deleted, 0, 2)
+fmt.Println(deleted)           // [2 3 4 5 6 7]
+
+deleted = slices.Delete(deleted, 1, 3)
+fmt.Println(deleted)           // [2 5 6 7]
+
+// Replace [i:j) with new elements
+replaced := []int{10, 20, 30, 40, 50}
+replaced = slices.Replace(replaced, 1, 3, 25, 35)
+fmt.Println(replaced)          // [10 25 35 40 50]
+
+// Replace with MORE elements than removed
+replaced = slices.Replace(replaced, 2, 3, 100, 200, 300)
+fmt.Println(replaced)          // [10 25 100 200 300 40 50]
+```
+
+**Example — Compact (adjacent duplicates only):**
+
+```go
+duplicates := []int{1, 1, 2, 2, 2, 3, 4, 4, 5}
+duplicates = slices.Compact(duplicates)
+fmt.Println(duplicates)        // [1 2 3 4 5]
+
+// Only removes ADJACENT duplicates!
+notAdjacent := []int{1, 2, 1, 2, 3}
+notAdjacent = slices.Compact(notAdjacent)
+fmt.Println(notAdjacent)       // [1 2 1 2 3] — no change
+```
+
+> **Important:** `slices` requires **Go 1.21+**. `SortFunc` uses a comparator that returns `int` (`-1`, `0`, `1`) — different from `sort.Slice` which uses a `less func(i, j int) bool`. `Compact` only removes **adjacent** duplicates — non-adjacent duplicates remain. `Insert`, `Delete`, and `Replace` return **new slices** (they may or may not allocate new memory depending on capacity).
