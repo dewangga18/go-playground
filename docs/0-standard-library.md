@@ -521,6 +521,54 @@ remove function
 
 > **Important:** `container/list` is **pointer-based**. Elements are accessed via `*Element` pointers (`Next()`, `Prev()`, `Front()`, `Back()`). There's no built-in way to deep-copy or clone a list — the only way is to iterate through the original and build a new one with `PushBack()`/`PushFront()`.
 
+**Queue pattern (FIFO):**
+
+```go
+queue := list.New()
+
+// Enqueue — add to back
+queue.PushBack("job1")
+queue.PushBack("job2")
+queue.PushBack("job3")
+
+// Dequeue — remove from front
+for queue.Len() > 0 {
+    e := queue.Front()
+    fmt.Println(e.Value)   // job1, job2, job3
+    queue.Remove(e)
+}
+```
+
+**Stack pattern (LIFO):**
+
+```go
+stack := list.New()
+
+// Push — add to front
+stack.PushFront("a")
+stack.PushFront("b")
+stack.PushFront("c")
+
+// Pop — remove from front
+for stack.Len() > 0 {
+    e := stack.Front()
+    fmt.Println(e.Value)   // c, b, a
+    stack.Remove(e)
+}
+```
+
+**When to use `container/list` vs slice:**
+
+| Scenario | Use | Why |
+|----------|-----|-----|
+| Frequent insert/delete in the **middle** | `container/list` | Slice needs shifting — expensive for large data |
+| Queue (FIFO) or Stack (LIFO) | **Either** | List is cleaner. Slice also works (`append` + reslice) but needs index tracking |
+| Random access by index (`list[500]`) | **Slice** | List must iterate from Front/Back — O(n) |
+| Small data (< 100 items) | **Slice** | Simpler, performance difference is negligible |
+| Cache (LRU, etc.) | `container/list` | Built-in move-to-front/back, remove — perfect for eviction tracking |
+
+> **TL;DR:** Default to slice. `container/list` shines when you need frequent insert/delete at arbitrary positions, or built-in move operations (like LRU cache).
+
 ---
 
 > **Note:** There may be other packages I haven't documented here. For the full list, check out the [Go Standard Library Docs](https://pkg.go.dev/std).
