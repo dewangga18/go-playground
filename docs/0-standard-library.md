@@ -767,4 +767,129 @@ fmt.Println(users)     // [{John 20} {Jane 22} {Doe 25} {Bob 28}]
 
 ---
 
+### `time` — Time & Date
+
+```go
+import "time"
+```
+
+**Functions used:**
+
+| Function | Description |
+|----------|-------------|
+| `time.Now()` | Returns current local time as `time.Time` |
+| `time.Date(year, month, day, hour, min, sec, nsec, loc)` | Creates a `time.Time` at specific date/location |
+| `time.Parse(layout, value)` | Parses a string into `time.Time` based on layout |
+| `time.LoadLocation(name)` | Loads a timezone by name (e.g. `"Asia/Jakarta"`) |
+
+**Method on `time.Time`:**
+
+| Method | Returns |
+|--------|---------|
+| `.Local()` | Convert to local timezone |
+| `.UTC()` | Convert to UTC |
+| `.In(loc)` | Convert to a specific `*time.Location` |
+| `.Zone()` | `(name string, offset int)` — e.g. `("WIB", 25200)` |
+| `.Unix()` | `int64` — Unix timestamp (seconds since epoch) |
+| `.UnixNano()` | `int64` — Unix timestamp in nanoseconds |
+| `.Format(layout)` | `string` — format time using a layout |
+
+**Built-in layout constants:**
+
+| Constant | Layout | Example |
+|----------|--------|---------|
+| `time.RFC3339` | `"2006-01-02T15:04:05Z07:00"` | `2022-07-22T07:32:22Z` |
+| `time.RFC3339Nano` | `"2006-01-02T15:04:05.999999999Z07:00"` | `2022-07-22T07:32:22.123456Z` |
+| `time.RFC1123Z` | `"Mon, 02 Jan 2006 15:04:05 -0700"` | `Thu, 22 Jul 2022 07:32:22 +0000` |
+| `time.DateTime` | `"2006-01-02 15:04:05"` | `2022-07-22 07:32:22` |
+| `time.DateOnly` | `"2006-01-02"` | `2022-07-22` |
+| `time.TimeOnly` | `"15:04:05"` | `07:32:22` |
+
+**Common custom layouts (reference time: `Mon Jan 2 15:04:05 MST 2006`):**
+
+> Go uses a unique approach — you write the layout using the reference time `01/02 03:04:05PM '06 -0700`. The actual numbers don't matter, only their position matters.
+
+| Layout | Use case | Example |
+|--------|----------|---------|
+| `"2006-01-02 15:04:05"` | MySQL / SQL datetime | `2024-07-07 19:33:00` |
+| `"2006-01-02"` | Date only (e.g. birthdate, logs) | `2024-07-07` |
+| `"15:04:05"` | Time only | `19:33:00` |
+| `"2006-01-02 15:04:05 -0700"` | With timezone offset | `2024-07-07 19:33:00 +0700` |
+| `"2006-01-02T15:04:05Z0700"` | ISO 8601 (no colon in offset) | `2024-07-07T19:33:00+0700` |
+| `"2006-01-02 15:04:05 MST"` | With timezone name | `2024-07-07 19:33:00 WIB` |
+| `"02-Jan-2006"` | DD-Mon-YYYY (log files, invoices) | `07-Jul-2024` |
+| `"Mon, 02 Jan 2006"` | HTTP headers | `Sun, 07 Jul 2024` |
+| `"Monday, 02 January 2006"` | Full human-readable | `Sunday, 07 July 2024` |
+
+**Key layout parts:**
+
+| Reference token | Means | Example output |
+|----------------|-------|---------------|
+| `2006` | Year (4 digits) | `2024` |
+| `06` | Year (2 digits) | `24` |
+| `01` or `1` | Month number | `07` or `7` |
+| `January` or `Jan` | Month name | `July` or `Jul` |
+| `02` or `2` | Day number | `07` or `7` |
+| `Monday` or `Mon` | Day name | `Sunday` or `Sun` |
+| `15` | Hour (24-hour) | `19` |
+| `03` or `3` | Hour (12-hour) | `07` or `7` |
+| `PM` or `pm` | AM/PM | `PM` or `pm` |
+| `04` or `4` | Minutes | `33` or `33` |
+| `05` or `5` | Seconds | `00` or `0` |
+| `.000` or `.999` | Milliseconds | `.123` |
+| `-0700` | Timezone offset (numeric) | `+0700` |
+| `-07:00` | Timezone offset (with colon) | `+07:00` |
+| `MST` | Timezone name | `WIB`, `UTC` |
+
+**Example:**
+
+```go
+now := time.Now()
+
+fmt.Println("now       :", now)                    // 2026-07-07 09:38:04.429564 +0700 WIB
+fmt.Println("Local     :", now.Local())             // 2026-07-07 09:38:04.429564 +0700 WIB
+fmt.Println("Zone      :", now.Zone())              // WIB 25200
+fmt.Println("UTC       :", now.UTC())               // 2026-07-07 02:38:04.429564 +0000 UTC
+fmt.Println("Unix      :", now.Unix())              // 1783391884
+fmt.Println("UnixNano  :", now.UnixNano())           // 1783391884429564000
+
+utc := time.Date(2022, time.July, 22, 0, 0, 0, 0, time.UTC)
+wib := time.Date(2024, 07, 7, 7, 0, 0, 0, time.Local)
+
+fmt.Println(utc.UTC())     // 2022-07-22 00:00:00 +0000 UTC
+fmt.Println(wib.UTC())     // 2024-07-07 00:00:00 +0000 UTC
+
+// Parse from string
+parseRFC3339, _ := time.Parse(time.RFC3339, "2022-07-22T07:32:22Z")
+fmt.Println("parseRFC3339:", parseRFC3339)           // 2022-07-22 07:32:22 +0000 UTC
+
+// Parse with custom layout
+parseMyTime, _ := time.Parse("2006-01-02 15:04:05", "2024-07-07 19:33:00")
+fmt.Println("parseMyTime:", parseMyTime)             // 2024-07-07 19:33:00 +0000 UTC
+
+// Format time to string
+fmt.Println(now.Format("2006-01-02 15:04:05"))      // 2026-07-07 09:38:04
+```
+
+**Common timezone locations in Indonesia and abroad:**
+
+```go
+import "time"
+
+// Indonesia
+wib, _ := time.LoadLocation("Asia/Jakarta")      // UTC+7
+wita, _ := time.LoadLocation("Asia/Makassar")   // UTC+8
+wit, _ := time.LoadLocation("Asia/Jayapura")    // UTC+9
+
+// International
+utc, _ := time.LoadLocation("UTC")                // UTC±0
+london, _ := time.LoadLocation("Europe/London")  // UTC±0 / +1 (DST)
+tokyo, _ := time.LoadLocation("Asia/Tokyo")      // UTC+9
+nyc, _ := time.LoadLocation("America/New_York") // UTC-5 / -4 (DST)
+```
+
+> **Note:** The reference time in Go is `Mon Jan 2 15:04:05 MST 2006` = `01/02 03:04:05PM '06 -0700`. It's easier to remember as "1 2 3 4 5 6 7" (month, day, hour, minute, second, year, timezone). For Indonesia, `Asia/Jakarta` is the standard IANA timezone — use `time.LoadLocation("Asia/Jakarta")` instead of hardcoding `+7`.
+
+---
+
 > **Note:** There may be other packages I haven't documented here. For the full list, check out the [Go Standard Library Docs](https://pkg.go.dev/std).
