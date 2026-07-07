@@ -5,9 +5,9 @@ import (
 	"reflect"
 )
 
-func main() {
-	mainReflect()
-}
+// func main() {
+// 	mainReflect()
+// }
 
 func mainReflect() {
 	fmt.Println("=== TypeOf & ValueOf ===")

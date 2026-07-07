@@ -1137,3 +1137,173 @@ func (c Calculator) Mul(n int) int { return c.Value * n }
 > **Key rule for `Set`:** You can only `Set` a value that is **addressable** — meaning it came from a pointer, a slice element, a map entry, or a field of an addressable struct. A value from `reflect.ValueOf(someVar)` (value, not pointer) is **never** addressable. Always use `reflect.ValueOf(&x).Elem()` to get a settable value.
 
 > **When to use reflect:** Validation libraries, ORMs/serializers, generic pretty-printers, testing utilities. Go's static typing usually makes reflection unnecessary for application code. Use sparingly — reflection is slower, less type-safe, and harder to read than explicit code.
+
+---
+
+### `regexp` — Regular Expressions
+
+```go
+import "regexp"
+```
+
+**Functions used:**
+
+| Function | Description |
+|----------|-------------|
+| `Compile(pattern)` | Compiles a regex pattern — returns `(*Regexp, error)`. Always check the error! |
+| `MustCompile(pattern)` | Compiles a regex pattern or **panics** — use when you're certain the pattern is valid (e.g. hardcoded literals) |
+| `MatchString(pattern, s)` | Checks if the pattern matches **anywhere** in the string — returns `bool` |
+| `FindString(s)` | Returns the **first** match as a string, or empty string if no match |
+| `FindAllString(s, n)` | Returns **all** matches as `[]string`. `n = -1` for all, `n >= 0` to limit results |
+| `ReplaceAllString(s, repl)` | Replaces all matches with `repl`. Supports `$1`, `$2`, etc. for capture group references |
+| `Split(s, n)` | Splits string by the pattern (like `strings.Split` but uses regex). `n = -1` for all, `n >= 0` to limit |
+| `FindStringSubmatch(s)` | Returns full match + capture groups as `[]string` — `[0]` = full match, `[1]` = first group, etc. |
+
+**Methods on `*Regexp`:**
+
+| Method | Returns |
+|--------|---------|
+| `.SubexpIndex(name)` | `int` — index of a named capture group (`(?P<name>...)`), for use with `FindStringSubmatch` results |
+
+**Example — Compile vs MustCompile:**
+
+```go
+// Compile — returns error for invalid patterns
+re, err := regexp.Compile(`golang`)
+if err != nil {
+    fmt.Println("Error:", err)
+    return
+}
+
+// MustCompile — panics on invalid pattern, use for hardcoded patterns
+re2 := regexp.MustCompile(`golang`)
+```
+
+**Example — MatchString:**
+
+```go
+text := "golang regexp is fun and golang is awesome"
+
+fmt.Println(regexp.MustCompile(`golang`).MatchString(text))   // true
+fmt.Println(regexp.MustCompile(`java`).MatchString(text))     // false
+```
+
+**Example — FindString (first match):**
+
+```go
+fmt.Println(regexp.MustCompile(`golang`).FindString(text))    // golang
+
+reDigit := regexp.MustCompile(`\d+`)
+fmt.Println(reDigit.FindString("order 99 price 500"))         // 99
+```
+
+**Example — FindAllString (all matches):**
+
+```go
+all := regexp.MustCompile(`golang`).FindAllString(text, -1)
+fmt.Println(all)              // [golang golang]
+fmt.Println(len(all))         // 2
+
+// Limit results
+limited := regexp.MustCompile(`golang`).FindAllString(text, 1)
+fmt.Println(limited)          // [golang]
+```
+
+**Example — ReplaceAllString (with capture groups):**
+
+```go
+replaced := regexp.MustCompile(`golang`).ReplaceAllString(text, "Go")
+fmt.Println(replaced)         // Go regexp is fun and Go is awesome
+
+// Replace digits
+replacedDigit := regexp.MustCompile(`\d+`).ReplaceAllString("phone 123, zip 456", "***")
+fmt.Println(replacedDigit)    // phone ***, zip ***
+
+// Capture group references ($1, $2, ...)
+emailText := "user@example.com, admin@test.org, invalid-email"
+reEmail := regexp.MustCompile(`(\w+)@(\w+\.\w+)`)
+masked := reEmail.ReplaceAllString(emailText, "$1 at $2")
+fmt.Println(masked)           // user at example.com, admin at test.org, invalid-email
+```
+
+**Example — Split:**
+
+```go
+csvLine := "a,b,c,d,e"
+parts := regexp.MustCompile(`,`).Split(csvLine, -1)
+fmt.Println(parts)            // [a b c d e]
+
+// With limit — stops after n parts
+limitedParts := regexp.MustCompile(`,`).Split(csvLine, 3)
+fmt.Println(limitedParts)     // [a b c,d,e]
+
+// Split on whitespace (handles multiple spaces)
+words := regexp.MustCompile(`\s+`).Split("hello   world  foo", -1)
+fmt.Println(words)            // [hello world foo]
+```
+
+**Example — FindStringSubmatch (capture groups):**
+
+```go
+logLine := "ERROR 2024-07-07 15:30:00 Connection timeout"
+reLog := regexp.MustCompile(`(\w+) (\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) (.+)`)
+matches := reLog.FindStringSubmatch(logLine)
+
+fmt.Println(matches[0])       // ERROR 2024-07-07 15:30:00 Connection timeout  (full match)
+fmt.Println(matches[1])       // ERROR
+fmt.Println(matches[2])       // 2024-07-07 15:30:00
+fmt.Println(matches[3])       // Connection timeout
+```
+
+**Named capture groups:**
+
+```go
+reNamed := regexp.MustCompile(`(?P<name>\w+)@(?P<domain>\w+\.\w+)`)
+emailMatch := reNamed.FindStringSubmatch("user@example.com")
+
+fmt.Println("Name:", emailMatch[reNamed.SubexpIndex("name")])      // user
+fmt.Println("Domain:", emailMatch[reNamed.SubexpIndex("domain")])  // example.com
+```
+
+**Full output of the example code:**
+
+```
+=== Compile — compile pattern (returns error if invalid) ===
+Compiled: golang
+
+=== MustCompile — compile or panic (use when pattern is certain) ===
+MustCompiled: golang
+
+=== MatchString — check if pattern matches anywhere ===
+true
+false
+
+=== FindString — first match ===
+golang
+99
+
+=== FindAllString — all matches (n = -1 for all) ===
+[golang golang]
+Count: 2
+[golang]
+
+=== ReplaceAllString — replace matches with new string ===
+Go regexp is fun and Go is awesome
+phone ***, zip ***
+user at example.com, admin at test.org, invalid-email
+
+=== Split — split string by pattern ===
+[a b c d e]
+[a b c,d,e]
+[hello world foo]
+
+=== FindStringSubmatch — match with capture groups ===
+[ERROR 2024-07-07 15:30:00 Connection timeout ERROR 2024-07-07 15:30:00 Connection timeout]
+Level: ERROR
+Time: 2024-07-07 15:30:00
+Message: Connection timeout
+Name: user
+Domain: example.com
+```
+
+> **Important:** `Compile()` returns an error for invalid patterns — use this when patterns come from user input. `MustCompile()` panics instead — use for hardcoded constants where a panic means a bug in your code. Named groups (`(?P<name>...)`) are more readable than positional groups — use `SubexpIndex()` to look up the index by name.
