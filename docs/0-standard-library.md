@@ -1672,3 +1672,152 @@ fmt.Println(notAdjacent)       // [1 2 1 2 3] — no change
 ```
 
 > **Important:** `slices` requires **Go 1.21+**. `SortFunc` uses a comparator that returns `int` (`-1`, `0`, `1`) — different from `sort.Slice` which uses a `less func(i, j int) bool`. `Compact` only removes **adjacent** duplicates — non-adjacent duplicates remain. `Insert`, `Delete`, and `Replace` return **new slices** (they may or may not allocate new memory depending on capacity).
+
+---
+
+### `path` — URL-Style Path Operations
+
+```go
+import "path"
+```
+
+Works with **forward-slash** separated paths — designed for URLs and Unix paths. **Not OS-aware** (use `path/filepath` for that).
+
+**Functions used:**
+
+| Function | Description |
+|----------|-------------|
+| `Base(p)` | Returns the **last element** of the path — e.g. `/a/b/c/file.txt` → `file.txt` |
+| `Dir(p)` | Returns the **directory** part (everything except the base) — e.g. `/a/b/c/file.txt` → `/a/b/c` |
+| `Ext(p)` | Returns the **file extension** including dot — e.g. `file.txt` → `.txt`. Only returns the **last** extension (`.tar.gz` → `.gz`) |
+| `Join(elem...)` | Joins path elements with `/` — cleans the result automatically |
+| `Split(p)` | Splits path into `(Dir, Base)` — e.g. `/a/b/c/file.txt` → `("/a/b/c/", "file.txt")` |
+| `Clean(p)` | Cleans up a path — resolves `.` and `..`, removes double slashes, cannot go above root |
+
+**Example:**
+
+```go
+// Base — last element
+fmt.Println(path.Base("/a/b/c/file.txt"))       // file.txt
+fmt.Println(path.Base("/a/b/c/"))                // c (trailing slash removed)
+fmt.Println(path.Base(""))                       // .
+
+// Dir — everything except base
+fmt.Println(path.Dir("/a/b/c/file.txt"))         // /a/b/c
+fmt.Println(path.Dir("/a/b/c/"))                 // /a/b/c
+fmt.Println(path.Dir("file.txt"))                // .
+
+// Ext — file extension (only last one)
+fmt.Println(path.Ext("/a/b/c/file.txt"))         // .txt
+fmt.Println(path.Ext("archive.tar.gz"))          // .gz
+fmt.Println(path.Ext("/a/b/c/"))                 // (empty)
+
+// Join — join with /
+fmt.Println(path.Join("a", "b", "c"))            // a/b/c
+fmt.Println(path.Join("a/", "/b/", "/c/"))      // a/b/c (cleaned)
+fmt.Println(path.Join("a", "..", "b", "c"))      // b/c (resolve ..)
+
+// Split — Dir + Base
+dir, file := path.Split("/a/b/c/file.txt")
+fmt.Printf("Dir: %q, File: %q\n", dir, file)    // Dir: "/a/b/c/", File: "file.txt"
+
+// Clean — resolve ., .., //
+fmt.Println(path.Clean("a/b/../c"))              // a/c
+fmt.Println(path.Clean("/a/b//c///d"))           // /a/b/c/d
+fmt.Println(path.Clean("/../a/b"))               // /a/b (cannot go above root)
+```
+
+> **Note:** `path` uses forward slashes **only** — it doesn't know about Windows backslashes. For OS-aware path operations, use `path/filepath`. `path.Base("")` returns `.` (current directory), not an empty string. `Ext` always returns the **last** extension — `archive.tar.gz` → `.gz`, not `.tar.gz`.
+
+---
+
+### `path/filepath` — OS-Aware Path Operations
+
+```go
+import "path/filepath"
+```
+
+Same functions as `path` but **OS-aware** — uses `/` on Linux/macOS and `\` on Windows. Also provides file system traversal functions.
+
+**Functions used:**
+
+| Function | Description |
+|----------|-------------|
+| `Join(elem...)` | Joins path elements using the **OS separator** — cleans the result |
+| `Base(p)` | Returns the last element of the path (OS-aware) |
+| `Dir(p)` | Returns the directory part of the path |
+| `Ext(p)` | Returns the file extension including dot |
+| `WalkDir(root, fn)` | Walks the directory tree **recursively** — calls `fn` for each file/dir |
+| `Glob(pattern)` | Returns matching file paths — supports `*` and `**` patterns |
+| `Abs(path)` | Converts a **relative path** to an **absolute path** |
+
+**WalkDir callback signature:**
+
+```go
+func(path string, d fs.DirEntry, err error) error
+```
+
+| Parameter | Description |
+|-----------|-------------|
+| `path` | Full path to the current file/directory |
+| `d` | `fs.DirEntry` — file info (`.IsDir()`, `.Name()`, `.Info()`) |
+| `err` | Error from accessing the path — return it or handle it |
+
+**Example — Base, Dir, Ext, Join:**
+
+```go
+// Same behavior as path package, but OS-aware
+fmt.Println(filepath.Join("a", "b", "c"))          // a/b/c
+fmt.Println(filepath.Join("a", "..", "b", ".", "c")) // b/c
+
+fmt.Println(filepath.Base("/a/b/c/file.txt"))     // file.txt
+fmt.Println(filepath.Dir("/a/b/c/file.txt"))      // /a/b/c
+fmt.Println(filepath.Ext("archive.tar.gz"))       // .gz
+```
+
+**Example — WalkDir (recursive directory traversal):**
+
+```go
+// Walks src/ directory recursively
+filepath.WalkDir("src", func(p string, d fs.DirEntry, err error) error {
+    if err != nil {
+        return err
+    }
+    if d.IsDir() {
+        fmt.Printf("  [DIR]  %s\n", p)
+    } else {
+        fmt.Printf("  [FILE] %s (%d bytes)\n", p, mustFileSize(p))
+    }
+    return nil
+})
+```
+
+**Example — Glob (pattern matching):**
+
+```go
+// All .go files in src/ (recursive)
+matches, _ := filepath.Glob("src/**/*.go")
+for _, m := range matches {
+    fmt.Println(m)
+}
+
+// All .md files
+mdMatches, _ := filepath.Glob("**/*.md")
+for _, m := range mdMatches {
+    fmt.Println(m)
+}
+```
+
+**Example — Abs (absolute path):**
+
+```go
+rel := "src/basics/hello-world.go"
+abs, _ := filepath.Abs(rel)
+fmt.Println("Relative:", rel)        // src/basics/hello-world.go
+fmt.Println("Absolute:", abs)        // /Users/admin/Documents/golang-playground/src/basics/hello-world.go
+
+cwd, _ := filepath.Abs(".")
+fmt.Println("Current dir:", cwd)    // /Users/admin/Documents/golang-playground
+```
+
+> **Note:** `WalkDir` was added in Go 1.16 — faster than the older `filepath.Walk` because it avoids `os.Stat` calls (uses `fs.DirEntry` directly from the OS). Always check the `err` parameter in the WalkDir callback — errors don't stop the walk automatically, you must return `nil` to skip or return the error to stop. `Glob` with `**` (double star) matches zero or more directory levels — supported since Go 1.16.

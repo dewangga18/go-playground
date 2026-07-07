@@ -5,9 +5,9 @@ import (
 	"slices"
 )
 
-func main() {
-	mainSlices()
-}
+// func main() {
+// 	mainSlices()
+// }
 
 func mainSlices() {
 	fmt.Println("=== Contains — check if element exists ===")
