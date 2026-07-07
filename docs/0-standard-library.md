@@ -956,3 +956,184 @@ fmt.Println("ParseDuration min", parseDuration.Minutes()) // 150
 ```
 
 > **Note:** Durations support arithmetic (`+`, `-`, `*`, `/`). When printed with `fmt.Println`, Go automatically formats them as human-readable strings like `48m20s` or `1h30m`. This works because `time.Duration` has a custom `.String()` method. `time.ParseDuration()` accepts strings like `"300ms"`, `"2h30m"`, `"1.5s"`, `"-10m"` — supports `ns`, `us`/`µs`, `ms`, `s`, `m`, `h`. For the full list, check out the [Go Standard Library Docs](https://pkg.go.dev/std).
+
+---
+
+### `reflect` — Runtime Reflection
+
+```go
+import "reflect"
+```
+
+Reflection lets you inspect and manipulate types/values **at runtime** — useful for generic utilities, serialization, validation, and testing.
+
+**Functions used:**
+
+| Function | Description |
+|----------|-------------|
+| `reflect.TypeOf(i)` | Returns the `reflect.Type` of the value — metadata about the type itself |
+| `reflect.ValueOf(i)` | Returns the `reflect.Value` — the actual value with methods to read/modify it |
+
+**Methods on `reflect.Type`:**
+
+| Method | Returns |
+|--------|---------|
+| `.Name()` | `string` — type name (e.g. `"Sample"`, `"int"`) |
+| `.Kind()` | `reflect.Kind` — the **underlying kind** (e.g. `struct`, `ptr`, `slice`, `map`, `string`, `int`) |
+| `.NumField()` | `int` — number of fields (for structs) |
+| `.Field(i)` | `reflect.StructField` — info about the i-th field (name, type, tags) |
+| `.NumMethod()` | `int` — number of exported methods |
+| `.Method(i)` | `reflect.Method` — info about the i-th method (name, type) |
+
+**Methods on `reflect.Value`:**
+
+| Method | Returns / Behavior |
+|--------|-------------------|
+| `.Kind()` | `reflect.Kind` — same as Type's Kind |
+| `.Elem()` | `reflect.Value` — dereferences a pointer/interface |
+| `.CanSet()` | `bool` — whether the value can be modified (only if **addressable**) |
+| `.SetInt(i)` | Sets the int value — panics if type mismatch |
+| `.SetString(s)` | Sets the string value |
+| `.SetFloat(f)` | Sets the float value |
+| `.FieldByName(name)` | `reflect.Value` — gets struct field by name |
+| `.MethodByName(name)` | `reflect.Value` — gets method by name |
+| `.Call(args)` | `[]reflect.Value` — calls the method with given arguments |
+| `.Int()` | `int64` — reads the int value |
+| `.String()` | `string` — reads the string value |
+
+**`reflect.Kind` — the underlying type category:**
+
+| Kind | Description |
+|------|-------------|
+| `struct` | Struct type |
+| `ptr` | Pointer |
+| `slice` | Slice |
+| `map` | Map |
+| `string` | String |
+| `int`, `int8`, ..., `int64` | Signed integers |
+| `float32`, `float64` | Floats |
+| `bool` | Boolean |
+| `func` | Function |
+| `interface` | Interface |
+| `array` | Array (fixed-size) |
+
+> `Kind()` tells you **what** the type fundamentally is, regardless of custom type names. E.g. both `type Age int` and `int` have `Kind() == int`.
+
+**Example:**
+
+```go
+// TypeOf & ValueOf
+sample := Sample{"Uhuyy", "23"}
+sampleType := reflect.TypeOf(sample)
+sampleValue := reflect.ValueOf(sample)
+
+fmt.Println(sampleType.Name())                                    // Sample
+fmt.Println(sampleValue.FieldByName("Name").String())            // Uhuyy
+
+// Kind
+fmt.Println(sampleType.Kind())                                    // struct
+fmt.Println(reflect.TypeOf(&sample).Kind())                       // ptr
+
+var nums []int
+fmt.Println(reflect.TypeOf(nums).Kind())                          // slice
+
+var m map[string]int
+fmt.Println(reflect.TypeOf(m).Kind())                             // map
+```
+
+**Struct Fields & Tags:**
+
+```go
+for i := 0; i < sampleType.NumField(); i++ {
+    field := sampleType.Field(i)
+    fmt.Printf("Field %d: %s (%s)\n", i, field.Name, field.Type)
+
+    required := field.Tag.Get("required")
+    max := field.Tag.Get("max")
+    fmt.Printf("  required: %q, max: %q\n", required, max)
+}
+```
+
+```
+  Field 0: Name (string)
+    required: "true", max: "10"
+  Field 1: Age (string)
+    required: "", max: ""
+```
+
+**Elem — dereference pointer:**
+
+```go
+num := 42
+ptr := reflect.ValueOf(&num)
+elem := ptr.Elem()                    // dereference → gets the int Value
+
+fmt.Println(ptr.Kind())               // ptr
+fmt.Println(elem.Kind())              // int
+fmt.Println(elem.Int())               // 42
+```
+
+**CanSet & Set — modify values through pointer:**
+
+```go
+// Must pass pointer + use Elem() to get an addressable value
+elem.SetInt(100)
+fmt.Println(num)                      // 100
+
+// Modify struct fields
+p := Person{"Budi", 25}
+pv := reflect.ValueOf(&p).Elem()      // must pass pointer!
+
+fmt.Println(pv.FieldByName("Name").CanSet())   // true
+pv.FieldByName("Name").SetString("Agus")
+pv.FieldByName("Age").SetInt(30)
+fmt.Println(p)                                  // {Agus 30}
+```
+
+**Methods — iterate and call dynamically:**
+
+```go
+calc := Calculator{Value: 10}
+calcType := reflect.TypeOf(calc)
+calcValue := reflect.ValueOf(calc)
+
+fmt.Println(calcType.NumMethod())               // 2
+
+// List methods
+for i := 0; i < calcType.NumMethod(); i++ {
+    method := calcType.Method(i)
+    fmt.Println(method.Name, method.Type)       // e.g. Add (func(main.Calculator, int) int)
+}
+
+// Call methods dynamically
+result := calcValue.MethodByName("Add").Call([]reflect.Value{reflect.ValueOf(5)})
+fmt.Println(result[0].Int())                    // 15
+
+result = calcValue.MethodByName("Mul").Call([]reflect.Value{reflect.ValueOf(3)})
+fmt.Println(result[0].Int())                    // 30
+```
+
+**Structs used in examples:**
+
+```go
+type Sample struct {
+    Name string `required:"true" max:"10"`
+    Age  string
+}
+
+type Person struct {
+    Name string
+    Age  int
+}
+
+type Calculator struct {
+    Value int
+}
+
+func (c Calculator) Add(n int) int { return c.Value + n }
+func (c Calculator) Mul(n int) int { return c.Value * n }
+```
+
+> **Key rule for `Set`:** You can only `Set` a value that is **addressable** — meaning it came from a pointer, a slice element, a map entry, or a field of an addressable struct. A value from `reflect.ValueOf(someVar)` (value, not pointer) is **never** addressable. Always use `reflect.ValueOf(&x).Elem()` to get a settable value.
+
+> **When to use reflect:** Validation libraries, ORMs/serializers, generic pretty-printers, testing utilities. Go's static typing usually makes reflection unnecessary for application code. Use sparingly — reflection is slower, less type-safe, and harder to read than explicit code.
