@@ -1307,3 +1307,223 @@ Domain: example.com
 ```
 
 > **Important:** `Compile()` returns an error for invalid patterns — use this when patterns come from user input. `MustCompile()` panics instead — use for hardcoded constants where a panic means a bug in your code. Named groups (`(?P<name>...)`) are more readable than positional groups — use `SubexpIndex()` to look up the index by name.
+
+---
+
+### `encoding/json` — JSON Encoding & Decoding
+
+```go
+import "encoding/json"
+```
+
+**Functions used:**
+
+| Function | Description |
+|----------|-------------|
+| `json.Marshal(v)` | Encodes a Go value (`struct`, `slice`, `map`) into JSON `[]byte` |
+| `json.MarshalIndent(v, prefix, indent)` | Same as `Marshal` but with pretty-printed indentation |
+| `json.Unmarshal(data, &v)` | Decodes JSON `[]byte` into a Go value (struct, slice, map) |
+
+**Struct tags:**
+
+| Tag | Description |
+|-----|-------------|
+| `json:"name"` | Maps struct field to `"name"` in JSON |
+| `json:"name,omitempty"` | Omits field if it has zero value |
+| `json:"-"` | Always omits the field |
+
+**Example — Marshal (struct → JSON):**
+
+```go
+type User struct {
+    Name  string `json:"name"`
+    Age   int    `json:"age"`
+    Email string `json:"email,omitempty"`
+}
+
+users := []User{
+    {"Budi", 25, "budi@example.com"},
+    {"Sari", 30, ""},
+}
+
+jsonBytes, _ := json.Marshal(users)
+fmt.Println(string(jsonBytes))
+// [{"name":"Budi","age":25,"email":"budi@example.com"},{"name":"Sari","age":30}]
+
+// Pretty-print with indentation
+jsonBytesIndent, _ := json.MarshalIndent(users, "", "  ")
+fmt.Println(string(jsonBytesIndent))
+// [
+//   {
+//     "name": "Budi",
+//     "age": 25,
+//     "email": "budi@example.com"
+//   },
+//   {
+//     "name": "Sari",
+//     "age": 30
+//   }
+// ]
+```
+
+**Example — Unmarshal (JSON → struct):**
+
+```go
+var decoded []User
+jsonStr := `[{"name":"Agus","age":28,"email":"agus@test.com"},{"name":"Dewi","age":22}]`
+err := json.Unmarshal([]byte(jsonStr), &decoded)
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println(decoded)
+// [{Agus 28 agus@test.com} {Dewi 22 }]
+```
+
+**Example — Unmarshal to map (when struct is unknown):**
+
+```go
+var raw []map[string]any
+json.Unmarshal([]byte(jsonStr), &raw)
+fmt.Println(raw)
+// [map[age:28 email:agus@test.com name:Agus] map[age:22 name:Dewi]]
+
+// Marshal map to JSON
+mapData := map[string]any{"name": "Test", "count": 42, "active": true}
+mapJSON, _ := json.Marshal(mapData)
+fmt.Println(string(mapJSON))
+// {"active":true,"count":42,"name":"Test"}
+```
+
+> **Note:** Use struct tags (`json:"fieldname"`) to control JSON field names. `omitempty` drops zero-value fields from the output. `MarshalIndent` is useful for debugging or config files. When unmarshaling to `map[string]any`, numbers become `float64` by default — use `json.NewDecoder()` with `UseNumber()` for precision.
+
+---
+
+### `encoding/csv` — CSV Read & Write
+
+```go
+import "encoding/csv"
+```
+
+**Functions/Constructors used:**
+
+| Function | Description |
+|----------|-------------|
+| `csv.NewWriter(w)` | Creates a CSV writer that writes to `w` (must be flushed) |
+| `.Write(record)` | Writes a single record (`[]string`) to the output |
+| `.Flush()` | Flushes buffered data to the underlying writer |
+| `.Error()` | Returns any error that occurred during writes |
+| `csv.NewReader(r)` | Creates a CSV reader that reads from `r` |
+| `.ReadAll()` | Reads all records at once — returns `([][]string, error)` |
+
+**Example — Write CSV:**
+
+```go
+var buf bytes.Buffer
+writer := csv.NewWriter(&buf)
+
+writer.Write([]string{"Name", "Age", "City"})
+writer.Write([]string{"Budi", "25", "Jakarta"})
+writer.Write([]string{"Sari", "30", "Bandung"})
+writer.Flush()
+
+fmt.Println(buf.String())
+// Name,Age,City
+// Budi,25,Jakarta
+// Sari,30,Bandung
+```
+
+**Example — Read CSV:**
+
+```go
+reader := csv.NewReader(strings.NewReader(buf.String()))
+records, err := reader.ReadAll()
+if err != nil {
+    log.Fatal(err)
+}
+
+for _, record := range records {
+    fmt.Println(record)
+}
+// [Name Age City]
+// [Budi 25 Jakarta]
+// [Sari 30 Bandung]
+```
+
+> **Note:** CSV writer must be **flushed** (`writer.Flush()`) after all writes — data is buffered. Always check `writer.Error()` after flushing. `ReadAll()` reads everything into memory — for large files, use `.Read()` in a loop instead.
+
+---
+
+### `encoding/base64` — Base64 Encoding
+
+```go
+import "encoding/base64"
+```
+
+**Functions used:**
+
+| Function | Description |
+|----------|-------------|
+| `StdEncoding.EncodeToString(data)` | Encodes `[]byte` to base64 string (standard: `+` and `/`) |
+| `StdEncoding.DecodeString(s)` | Decodes base64 string to `[]byte` |
+| `URLEncoding.EncodeToString(data)` | URL-safe base64 (`-` and `_` instead of `+` and `/`) |
+| `URLEncoding.DecodeString(s)` | Decodes URL-safe base64 string to `[]byte` |
+
+**Example:**
+
+```go
+data := []byte("Hello, Golang!")
+
+// Standard base64
+encodedStd := base64.StdEncoding.EncodeToString(data)
+fmt.Println(encodedStd)           // SGVsbG8sIEdvbGFuZyE=
+
+decoded, _ := base64.StdEncoding.DecodeString(encodedStd)
+fmt.Println(string(decoded))      // Hello, Golang!
+
+// URL-safe base64 (for URLs / filenames)
+encodedURL := base64.URLEncoding.EncodeToString(data)
+fmt.Println(encodedURL)           // SGVsbG8sIEdvbGFuZyE=
+
+decodedURL, _ := base64.URLEncoding.DecodeString(encodedURL)
+fmt.Println(string(decodedURL))   // Hello, Golang!
+```
+
+> **Note:** Base64 output is **not encrypted** — just encoded. Always check the error from `DecodeString` — invalid input returns an error. Use `URLEncoding` when the encoded string needs to appear in URLs or filenames (replaces `+` with `-` and `/` with `_`).
+
+---
+
+### `encoding/hex` — Hex Encoding
+
+```go
+import "encoding/hex"
+```
+
+**Functions used:**
+
+| Function | Description |
+|----------|-------------|
+| `hex.EncodeToString(data)` | Encodes `[]byte` to hex string (lowercase) |
+| `hex.DecodeString(s)` | Decodes hex string to `[]byte` — returns error if invalid |
+
+**Example:**
+
+```go
+data := []byte("Hello, Golang!")
+
+encoded := hex.EncodeToString(data)
+fmt.Println(encoded)              // 48656c6c6f2c20476f6c616e6721
+
+decoded, _ := hex.DecodeString(encoded)
+fmt.Println(string(decoded))      // Hello, Golang!
+
+// Check validity by trying to decode
+func isValidHex(s string) bool {
+    _, err := hex.DecodeString(s)
+    return err == nil
+}
+
+fmt.Println(isValidHex(encoded))  // true
+fmt.Println(isValidHex("xyz"))     // false
+```
+
+> **Note:** Hex encoding doubles the string length — each byte becomes 2 hex characters. Use `hex.DecodeString()` with error checking to validate hex input (there's no built-in `ValidString` — just decode and check the error).
