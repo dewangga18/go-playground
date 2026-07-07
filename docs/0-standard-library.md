@@ -781,6 +781,7 @@ import "time"
 | `time.Date(year, month, day, hour, min, sec, nsec, loc)` | Creates a `time.Time` at specific date/location |
 | `time.Parse(layout, value)` | Parses a string into `time.Time` based on layout |
 | `time.LoadLocation(name)` | Loads a timezone by name (e.g. `"Asia/Jakarta"`) |
+| `time.ParseDuration(s)` | Parses a duration string like `"2h30m"` into `time.Duration` |
 
 **Method on `time.Time`:**
 
@@ -790,6 +791,10 @@ import "time"
 | `.UTC()` | Convert to UTC |
 | `.In(loc)` | Convert to a specific `*time.Location` |
 | `.Zone()` | `(name string, offset int)` — e.g. `("WIB", 25200)` |
+| `.Year()` | `int` — year component |
+| `.Month()` | `time.Month` — month name |
+| `.Day()` | `int` — day of month |
+| `.Hour()` | `int` — hour (0–23) |
 | `.Unix()` | `int64` — Unix timestamp (seconds since epoch) |
 | `.UnixNano()` | `int64` — Unix timestamp in nanoseconds |
 | `.Format(layout)` | `string` — format time using a layout |
@@ -853,10 +858,10 @@ fmt.Println("UTC       :", now.UTC())               // 2026-07-07 02:38:04.42956
 fmt.Println("Unix      :", now.Unix())              // 1783391884
 fmt.Println("UnixNano  :", now.UnixNano())           // 1783391884429564000
 
-utc := time.Date(2022, time.July, 22, 0, 0, 0, 0, time.UTC)
+utc := time.Date(2022, time.July, 22, 5, 0, 0, 0, time.UTC)
 wib := time.Date(2024, 07, 7, 7, 0, 0, 0, time.Local)
 
-fmt.Println(utc.UTC())     // 2022-07-22 00:00:00 +0000 UTC
+fmt.Println(utc.UTC())     // 2022-07-22 05:00:00 +0000 UTC
 fmt.Println(wib.UTC())     // 2024-07-07 00:00:00 +0000 UTC
 
 // Parse from string
@@ -869,6 +874,12 @@ fmt.Println("parseMyTime:", parseMyTime)             // 2024-07-07 19:33:00 +000
 
 // Format time to string
 fmt.Println(now.Format("2006-01-02 15:04:05"))      // 2026-07-07 09:38:04
+
+// Extract components
+fmt.Println("Year:", utc.Year())    // 2022
+fmt.Println("Month:", utc.Month())   // July
+fmt.Println("Day:", utc.Day())     // 22
+fmt.Println("Hour:", utc.Hour())    // 5
 ```
 
 **Common timezone locations in Indonesia and abroad:**
@@ -892,4 +903,56 @@ nyc, _ := time.LoadLocation("America/New_York") // UTC-5 / -4 (DST)
 
 ---
 
-> **Note:** There may be other packages I haven't documented here. For the full list, check out the [Go Standard Library Docs](https://pkg.go.dev/std).
+### `time.Duration` — Time Intervals
+
+```go
+import "time"
+```
+
+`time.Duration` is a type representing elapsed time in nanoseconds. Built from constants like `time.Second`, `time.Minute`, `time.Hour`.
+
+**Duration constants:**
+
+| Constant | Approx value |
+|----------|-------------|
+| `time.Nanosecond` | `1 ns` |
+| `time.Microsecond` | `1000 ns` |
+| `time.Millisecond` | `1,000,000 ns` |
+| `time.Second` | `1,000,000,000 ns` |
+| `time.Minute` | `60 s` |
+| `time.Hour` | `60 min` |
+
+**Methods on `time.Duration`:**
+
+| Method | Returns |
+|--------|---------|
+| `.Nanoseconds()` | `int64` — duration as total nanoseconds |
+| `.Microseconds()` | `int64` — duration as total microseconds |
+| `.Milliseconds()` | `int64` — duration as total milliseconds |
+| `.Seconds()` | `float64` — duration in seconds (with decimals) |
+| `.Minutes()` | `float64` — duration in minutes |
+| `.Hours()` | `float64` — duration in hours |
+
+**Example:**
+
+```go
+duration1 := time.Second * 100         // 100 seconds
+duration2 := time.Minute * 10          // 10 minutes
+duration3 := time.Hour * 1             // 1 hour
+
+fmt.Println("Seconds", duration1.Seconds())   // 100
+fmt.Println("Minutes", duration2.Minutes())   // 10
+fmt.Println("Hours", duration3.Hours())       // 1
+
+// Arithmetic — durations support +, -, *, /
+diff := duration3 - duration2 - duration1
+fmt.Println("Duration", diff)                 // 48m20s
+
+// Parse from string
+parseDuration, _ := time.ParseDuration("2h30m")
+fmt.Println("ParseDuration", parseDuration)            // 2h30m0s
+fmt.Println("ParseDuration hour", parseDuration.Hours())  // 2.5
+fmt.Println("ParseDuration min", parseDuration.Minutes()) // 150
+```
+
+> **Note:** Durations support arithmetic (`+`, `-`, `*`, `/`). When printed with `fmt.Println`, Go automatically formats them as human-readable strings like `48m20s` or `1h30m`. This works because `time.Duration` has a custom `.String()` method. `time.ParseDuration()` accepts strings like `"300ms"`, `"2h30m"`, `"1.5s"`, `"-10m"` — supports `ns`, `us`/`µs`, `ms`, `s`, `m`, `h`. For the full list, check out the [Go Standard Library Docs](https://pkg.go.dev/std).
