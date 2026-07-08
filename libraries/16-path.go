@@ -79,8 +79,8 @@ func mainPath() {
 	fmt.Println("\n--- filepath.WalkDir — walk directory tree ---")
 	// WalkDir visits each file/directory recursively
 	// callback func(path string, d fs.DirEntry, err error) error
-	fmt.Println("Walking src/ directory:")
-	filepath.WalkDir("src", func(p string, d fs.DirEntry, err error) error {
+	fmt.Println("Walking directory:")
+	filepath.WalkDir(".", func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -93,8 +93,8 @@ func mainPath() {
 	})
 
 	fmt.Println("\n--- filepath.Glob — match files by pattern ---")
-	matches, _ := filepath.Glob("src/**/*.go")
-	fmt.Println("All .go files in src/:")
+	matches, _ := filepath.Glob("**/*.go")
+	fmt.Println("All .go files in all directories:")
 	for _, m := range matches {
 		fmt.Println(" ", m)
 	}
@@ -107,7 +107,7 @@ func mainPath() {
 	}
 
 	fmt.Println("\n--- filepath.Abs — get absolute path ---")
-	rel := "src/basics/hello-world.go"
+	rel := "basics/hello-world.go"
 	abs, _ := filepath.Abs(rel)
 	fmt.Println("Relative:", rel)
 	fmt.Println("Absolute:", abs)

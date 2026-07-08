@@ -2181,3 +2181,254 @@ f.Close()
 ```
 
 > **Important:** The buffer is **empty until you call `Flush()`** — data accumulates in memory. Always call `Flush()` after writing, or use `defer writer.Flush()`. For `Scanner`, always check `scanner.Err()` after the loop — the loop stops on both EOF AND errors. `Scanner.Text()` returns the line **without** the trailing newline (unlike `ReadString` which includes the delimiter).
+
+---
+
+### **File Manipulation** — Create, Read, Update, Delete
+
+```go
+import (
+    "os"
+    "io"
+    "bufio"
+)
+```
+
+File operations in Go are spread across a few packages. The core is `os`, with `io.Copy` for streaming and `bufio` for line-by-line reading.
+
+**Functions used:**
+
+| Function | Description |
+|----------|-------------|
+| `os.OpenFile(name, flag, perm)` | Opens a file with specific **flags** and **permissions** — the most flexible way to open files |
+| `os.Create(name)` | Creates a new file (or truncates existing) — shorthand for `os.OpenFile(name, O_CREATE\|O_WRONLY\|O_TRUNC, 0666)` |
+| `os.Open(name)` | Opens an existing file for reading — shorthand for `os.OpenFile(name, O_RDONLY, 0)` |
+| `os.ReadFile(name)` | Reads entire file into `[]byte` — simplest way to read (Go 1.16+) |
+| `os.WriteFile(name, data, perm)` | Writes data to a file (creates or truncates) — simplest way to write (Go 1.16+) |
+| `os.Mkdir(name, perm)` | Creates a single directory — returns error if parent doesn't exist |
+| `os.ReadDir(name)` | Reads directory entries — returns `[]fs.DirEntry` (Go 1.16+) |
+| `os.Rename(old, new)` | Renames (moves) a file or directory |
+| `os.Remove(name)` | Removes a single file **or** an empty directory |
+| `os.RemoveAll(path)` | Removes a file or directory and **all its contents** — use with caution! |
+| `io.Copy(dst, src)` | Copies content from an `io.Reader` to an `io.Writer` |
+| `file.WriteString(s)` | Writes a string to an open file (method on `*os.File`) |
+| `bufio.NewReader(file).ReadLine()` | Reads a line from a buffered reader (returns `line []byte`, `isPrefix bool`, `err error`) |
+
+**File open flags (`os.O_*`):**
+
+| Flag | Description |
+|------|-------------|
+| `os.O_CREATE` | Creates the file if it doesn't exist |
+| `os.O_WRONLY` | Opens for writing only |
+| `os.O_RDONLY` | Opens for reading only |
+| `os.O_RDWR` | Opens for reading and writing |
+| `os.O_TRUNC` | Truncates the file to zero length if it exists |
+| `os.O_APPEND` | Appends to the file (writes go to the end) |
+| `os.O_EXCL` | Used with `O_CREATE` — returns error if the file already exists |
+
+**Common flag combos:**
+
+| Combo | Use case |
+|-------|----------|
+| `O_CREATE \| O_WRONLY \| O_TRUNC` | Create or overwrite (like `os.Create`) |
+| `O_CREATE \| O_EXCL` | Create new file only — error if exists |
+| `O_APPEND \| O_WRONLY` | Append to existing file |
+| `O_RDONLY` | Open for reading only (like `os.Open`) |
+
+**Example — Create a file (with `os.OpenFile`):**
+
+```go
+func createNewFile(name string, msg string) error {
+    file, err := os.OpenFile(
+        name,
+        os.O_CREATE|os.O_WRONLY|os.O_TRUNC,
+        0666,
+    )
+    if err != nil {
+        return err
+    }
+    defer file.Close()
+
+    file.WriteString(msg)
+    return nil
+}
+
+createNewFile("logs/hi.txt", "sample hi!")
+// → error if "logs/" directory doesn't exist
+
+os.Mkdir("logs", 0755)  // create directory first
+createNewFile("logs/hi.txt", "hi everyone")
+// → creates logs/hi.txt with content "hi everyone"
+```
+
+> **Key pattern:** Always `defer file.Close()` right after opening — ensures the file is closed even if an error occurs later. The `0666` permission is the default for new files (read/write for user, group, others). The directory **must exist** before creating a file inside it — `os.OpenFile` won't create parent directories.
+
+**Example — Read a file (3 ways):**
+
+```go
+// Way 1: os.ReadFile — simplest (reads everything at once)
+func readFile(name string) (string, error) {
+    content, err := os.ReadFile(name)
+    if err != nil {
+        return "", err
+    }
+    return string(content), nil
+}
+
+content, _ := readFile("logs/hi.txt")
+fmt.Println("content:", content)  // "hi everyone"
+
+// Way 2: os.OpenFile + bufio — read line by line
+func readFile2(name string) (string, error) {
+    file, err := os.OpenFile(name, os.O_RDONLY, 0666)
+    if err != nil {
+        return "", err
+    }
+    defer file.Close()
+
+    reader := bufio.NewReader(file)
+    var msg string
+    for {
+        line, _, err := reader.ReadLine()
+        if err == io.EOF {
+            break
+        }
+        msg += string(line)
+    }
+    return msg, nil
+}
+
+// Way 3: os.Open + io.Copy to bytes.Buffer
+source, _ := os.Open(src)
+var buf bytes.Buffer
+io.Copy(&buf, source)
+```
+
+**Example — Update (overwrite) and Append:**
+
+```go
+// Overwrite — uses os.WriteFile (Go 1.16+)
+func updateFile(name string, content string) error {
+    return os.WriteFile(name, []byte(content), 0644)
+}
+
+updateFile("logs/hi.txt", "sample rewrite all file!")
+// → file now contains "sample rewrite all file!"
+
+// Append — uses os.OpenFile with O_APPEND
+func appendFile(name string, content ...string) error {
+    file, err := os.OpenFile(name, os.O_APPEND|os.O_WRONLY, 0666)
+    if err != nil {
+        return err
+    }
+    defer file.Close()
+
+    for _, msg := range content {
+        _, err = file.WriteString(msg)
+        if err != nil {
+            return err
+        }
+    }
+    return err
+}
+
+appendFile("logs/hi.txt", "\nit's line 2", "\nhi it's line 3")
+// → appends "\nit's line 2\nhi it's line 3" to the file
+```
+
+**Example — Copy, Rename, Delete:**
+
+```go
+// Copy — open source, create destination, io.Copy
+func copyFile(src, dst string) error {
+    source, err := os.Open(src)
+    if err != nil {
+        return err
+    }
+    defer source.Close()
+
+    dest, err := os.Create(dst)
+    if err != nil {
+        return err
+    }
+    defer dest.Close()
+
+    _, err = io.Copy(dest, source)
+    return err
+}
+
+copyFile("logs/hi.txt", "logs/hi-new.txt")
+// → copies content to hi-new.txt
+
+// Rename (or move)
+os.Rename("logs/hi.txt", "logs/hi-old.txt")
+// → renames hi.txt → hi-old.txt
+
+// Delete single file
+err := os.Remove("logs/hi.txt")
+// → removes the file (error if not found)
+
+// Delete directory + all contents
+err := os.RemoveAll("logs")
+// → removes entire logs/ directory and everything inside!
+```
+
+**Example — Directory operations:**
+
+```go
+// Create directory
+os.Mkdir("logs", 0755)
+
+// Read directory contents
+func readDirectory(pathname string) error {
+    files, err := os.ReadDir(pathname)
+    if err != nil {
+        return err
+    }
+    for _, file := range files {
+        fmt.Println(file.Name())
+    }
+    return nil
+}
+
+readDirectory("logs")
+// → lists all files/dirs inside logs/
+```
+
+**Program output (full flow):**
+
+```
+failed to create file open logs/hi.txt: no such file or directory
+created logs directory
+read fake directory open fake-logs: no such file or directory
+success read logs directory
+success create new file
+content: hi everyone
+success update file
+content: sample rewrite all file!
+content: sample rewrite all file!
+success append
+content: sample rewrite all file!
+it's line 2
+hi it's line 3
+content: sample rewrite all file!
+it's line 2
+hi it's line 3
+copy new file
+rename file
+delete file
+delete directory all
+failed to read directory open logs: no such file or directory
+```
+
+> **Key patterns:** (1) Always check **`err`** from `os.OpenFile` — it fails if the parent directory doesn't exist. (2) `os.ReadFile` and `os.WriteFile` are Go 1.16+ convenience wrappers — prefer them over the older `ioutil` functions. (3) `os.RemoveAll` is **destructive** — it removes everything without confirmation. (4) For appending, use `os.O_APPEND` combined with `os.O_WRONLY` — writes automatically go to the end of the file. (5) `os.Rename` works across directories on the same filesystem — it's a **move** operation.
+
+**File permission bits (`os.FileMode`):**
+
+| Mode | Octal | Meaning |
+|------|-------|---------|
+| `0644` | `rw-r--r--` | File — owner can write, others can read (default for files) |
+| `0755` | `rwxr-xr-x` | Directory or executable — owner can write, others can read/execute |
+| `0666` | `rw-rw-rw-` | File — everyone can read and write (used by `os.OpenFile` examples) |
+
+> **Note:** `os.Create` is shorthand for `os.OpenFile(name, O_CREATE|O_WRONLY|O_TRUNC, 0666)`. `os.Open` is shorthand for `os.OpenFile(name, O_RDONLY, 0)`. For reading/writing small files, `os.ReadFile` and `os.WriteFile` are the simplest choice. For large files, use `bufio` or `io.Copy` with chunked reading.
