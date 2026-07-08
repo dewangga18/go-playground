@@ -5,6 +5,38 @@ Module management, build, and run commands for a Go project.
 - `go mod init <module-name>` — initializes a Go project
 - `basic-module` → the module name used in import paths
 
+### `go mod download`
+
+```bash
+go mod download
+```
+
+- Downloads all module dependencies into the local cache (`~/go/pkg/mod`)
+- Does **not** compile or run — just fetches the source
+- Useful in CI/CD pipelines to cache dependencies before building
+- ⚠️ **No need to set `$GOPATH` manually** — Go modules work from any directory; cache defaults to `$HOME/go/pkg/mod`
+
+### `go mod verify`
+
+```bash
+go mod verify
+```
+
+- Verifies the checksums of downloaded modules against `go.sum`
+- Detects tampered or corrupted cached dependencies
+- Reports `all modules verified` if everything is correct
+
+### `go clean -modcache`
+
+```bash
+go clean -modcache
+```
+
+- Removes the entire module download cache (`~/go/pkg/mod`)
+- Useful when dependencies are corrupted or you want a fresh download
+- Run `go mod download` after this to re-fetch dependencies
+- ⚠️ **No need to set `$GOPATH` manually** — with Go modules, `$GOPATH` defaults to `$HOME/go` automatically
+
 ## Go Build
 
 ```bash
@@ -60,6 +92,27 @@ go mod tidy
 
 - Cleans up `go.mod` and downloads any missing dependencies
 - Run this after adding imports from external packages
+
+### `go list -m -u all`
+
+```bash
+go list -m -u all
+```
+
+- Lists all module dependencies and checks for available updates (`-u`)
+- For each module, shows `current version` and `latest version` side by side
+- Only checks modules that are already in `go.mod`
+
+### `go get -u ./...`
+
+```bash
+go get -u ./...
+```
+
+- Updates **all** dependencies to their latest available versions
+- `./...` means all packages in the current module tree
+- Updates `go.mod` and `go.sum` automatically
+- ⚠️ **Caution:** May introduce breaking changes — prefer updating specific packages: `go get package@latest`
 
 ### `.env` File
 

@@ -25,17 +25,17 @@ func mainError() {
 	}
 
 	fmt.Println("\n=== Custom Error Example ===")
-	errSave1 := saveData("", "data1")
+	errSave1 := saveData("")
 	if errSave1 != nil {
 		fmt.Println("ERROR:", errSave1)
 	}
 
-	errSave2 := saveData("root", "data2")
+	errSave2 := saveData("root")
 	if errSave2 != nil {
 		fmt.Println("ERROR:", errSave2)
 	}
 
-	errSave3 := saveData("Aaron", "data3")
+	errSave3 := saveData("Aaron")
 	if errSave3 != nil {
 		fmt.Println("ERROR:", errSave3)
 	}
@@ -73,7 +73,7 @@ func (ve *notFoundError) Error() string {
 	return ve.Message
 }
 
-func saveData(name string, data any) error {
+func saveData(name string) error {
 	if name == "" {
 		return &validationError{
 			Message: "name is required",
