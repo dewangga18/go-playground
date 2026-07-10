@@ -1,4 +1,4 @@
-## Third Party Packages Integrated
+## Go Third Party Packages
 
 Third-party packages I've integrated into this project — installation, setup, and usage notes.
 

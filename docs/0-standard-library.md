@@ -1,4 +1,4 @@
-## Standard Library
+## Go Standard Library
 
 Quick reference for Go standard library packages I've encountered so far.
 
