@@ -317,25 +317,155 @@ func assertEqual(t *testing.T, got, want any) {
 | Annotation | Effect |
 |------------|--------|
 | `//go:build !integration` | Build constraint — exclude file from certain builds |
-| `func TestMain(m *testing.M)` | Test **main** — runs once for the package. Use for global setup/teardown |
+| `func TestMain(m *testing.M)` | Test **main** — runs once for the **entire package**. Use for global setup/teardown |
 | `t.Skip("reason")` | Skip a test at runtime — useful for conditional tests (e.g. requires network) |
 
-**Example — `TestMain` for global setup:**
+---
+
+#### `TestMain` — Global Setup/Teardown
+
+`TestMain` runs **once** for all tests in a package — before any test, and after all tests finish.
 
 ```go
+// File: test/sample_main_test.go
+package test
+
+import (
+	"fmt"
+	"testing"
+)
+
 func TestMain(m *testing.M) {
-    // Global setup
-    setupDB()
-
-    // Run all tests in the package
-    code := m.Run()
-
-    // Global teardown
-    teardownDB()
-
-    os.Exit(code)
+	fmt.Println("Starting Test")   // ← runs ONCE before all tests
+	m.Run()                          // ← runs all test functions
+	fmt.Println("Test Finished")    // ← runs ONCE after all tests
 }
 ```
+
+**Without `TestMain`**, each test runs independently and there's no hook for global setup.
+
+**With `TestMain`**, you can:
+
+| Use case | Example |
+|----------|---------|
+| Open DB connection | `setupDB()` before `m.Run()` |
+| Seed test data | `seedData()` before `m.Run()` |
+| Start mock server | `testServer.Start()` before `m.Run()` |
+| Clean up resources | `testServer.Close()` after `m.Run()` |
+
+Output when running all tests:
+
+```
+Starting Test
+=== RUN   TestSquare
+--- PASS: TestSquare (0.00s)
+=== RUN   TestFuncAssertion
+--- PASS: TestFuncAssertion (0.00s)
+... (all tests run here) ...
+Test Finished
+```
+
+> **Note:** `m.Run()` returns an exit code (`int`). In real projects, you should pass it to `os.Exit(code)` so the shell reports the correct pass/fail status. The example above omits it for simplicity.
+
+---
+
+#### `t.Skip` — Conditional Skipping
+
+Skip a test at runtime when a condition isn't met.
+
+```go
+// File: test/sample_skip_test.go
+package test
+
+import (
+	"runtime"
+	"testing"
+)
+
+func TestSkipFunction(t *testing.T) {
+	goos := runtime.GOOS
+	if goos != "linux" {
+		t.Skip("Skipping this test because it's not implemented for", goos)
+	}
+
+	// This code only runs on Linux
+	t.Log("This will not be printed on macOS or Windows")
+}
+```
+
+Output on macOS:
+
+```
+=== RUN   TestSkipFunction
+    sample_skip_test.go:11: Skipping this test because it's not implemented for darwin
+--- SKIP: TestSkipFunction (0.00s)
+```
+
+> `t.Skip` calls `t.SkipNow()` internally (stops the test immediately). Use it for: OS-specific tests, network-dependent tests, or tests that need external services that aren't available.
+
+---
+
+### Subtests (`t.Run`)
+
+Subtests let you group related test cases inside one test function. Each subtest runs independently — setup/teardown can be shared, but one subtest failure doesn't stop others.
+
+```go
+import "testing"
+```
+
+**Basic subtest structure:**
+
+```go
+t.Run("subtest-name", func(t *testing.T) {
+    // test logic here
+})
+```
+
+**Example — `test/sample_sub_test.go`:**
+
+```go
+package test
+
+import (
+	"testing"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestSubFunction(t *testing.T) {
+	t.Run("sub1", func(t *testing.T) {
+		res := Square(2)
+		assert.Equal(t, 4, res)
+	})
+
+	t.Run("sub2", func(t *testing.T) {
+		res := Square(3)
+		assert.Equal(t, 9, res)
+	})
+}
+```
+
+Output:
+
+```
+=== RUN   TestSubFunction
+=== RUN   TestSubFunction/sub1
+=== RUN   TestSubFunction/sub2
+--- PASS: TestSubFunction (0.00s)
+    --- PASS: TestSubFunction/sub1 (0.00s)
+    --- PASS: TestSubFunction/sub2 (0.00s)
+```
+
+**Benefits of subtests:**
+
+| Benefit | Explanation |
+|---------|-------------|
+| **Shared setup** | Common variables/code before `t.Run()` — runs once, not per subtest |
+| **Independent failures** | One subtest can fail, others still run |
+| **Clear naming** | Output shows `TestName/subname` — easy to identify failures |
+| **Run a single subtest** | `go test -v -run TestSubFunction/sub1` |
+| **Table-driven + subtests** | Combine table tests with `t.Run(name, fn)` for the cleanest pattern |
+
+> Subtests are especially powerful with **table-driven tests**: define a slice of test cases, then loop and call `t.Run()` for each case. Each row in the table becomes a named subtest.
 
 ---
 
@@ -346,6 +476,9 @@ func TestMain(m *testing.M) {
 | `test/sample_calc_test.go` | All 6 failure methods with inline explanations |
 | `test/sample_calc.go` | Simple `Square()` function used in the example tests |
 | `test/sample_testify_test.go` | Testify `assert` + `require` + mock demonstrations |
+| `test/sample_main_test.go` | `TestMain` — global setup/teardown hook |
+| `test/sample_skip_test.go` | `t.Skip` — conditional test skipping |
+| `test/sample_sub_test.go` | Subtests with `t.Run` — nested test groups |
 
 ---
 
