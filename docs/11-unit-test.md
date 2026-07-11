@@ -559,6 +559,98 @@ go test -v -run TestTableFunction/Test3
 
 ---
 
+### Benchmark — Performance Testing
+
+Benchmarks measure how fast and how memory-efficient your code is. They use `testing.B` instead of `testing.T`.
+
+**Run commands:**
+
+| Command | Description |
+|---------|-------------|
+| `go test -bench=.` | Run all benchmarks |
+| `go test -bench=. -benchmem` | Run benchmarks + show memory allocations (`B/op`, `allocs/op`) |
+| `go test -bench=. -run=^$` | Run benchmarks **only** (skip all tests) |
+| `go test -bench=BenchmarkSquare` | Run specific benchmark |
+
+**Basic benchmark — `test/sample_brenchmark_test.go`:**
+
+```go
+package test
+
+import "testing"
+
+func BenchmarkSquare(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		Square(10)
+	}
+}
+```
+
+`b.N` is adjusted by Go runtime — starts small, then increases until the benchmark gets a stable measurement.
+
+**Benchmark with subtests:**
+
+```go
+func BenchmarkSquareSub(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		b.Run("Square 5", func(b *testing.B) {
+			Square(5)
+		})
+		b.Run("Square 3", func(b *testing.B) {
+			Square(3)
+		})
+	}
+}
+```
+
+**Table-driven benchmark:**
+
+```go
+func BenchmarkTableSquare(b *testing.B) {
+	testCase := []struct {
+		Name  string
+		Input int
+	}{
+		{Name: "Square 5", Input: 5},
+		{Name: "Square 3", Input: 3},
+		{Name: "Square 2", Input: 2},
+		{Name: "Square 1", Input: 1},
+	}
+
+	for _, tc := range testCase {
+		b.Run(tc.Name, func(b *testing.B) {
+			Square(tc.Input)
+		})
+	}
+}
+```
+
+**Sample output:**
+
+```
+BenchmarkSquare-8                    1000000000               0.3269 ns/op          0 B/op          0 allocs/op
+BenchmarkSquareSub/Square_5-8        1000000000               0.0000001 ns/op       0 B/op          0 allocs/op
+BenchmarkSquareSub/Square_3-8        1000000000               0.0000000 ns/op       0 B/op          0 allocs/op
+BenchmarkTableSquare/Square_5-8      1000000000               0.0000001 ns/op       0 B/op          0 allocs/op
+BenchmarkTableSquare/Square_3-8      1000000000               0.0000001 ns/op       0 B/op          0 allocs/op
+BenchmarkTableSquare/Square_2-8      1000000000               0.0000000 ns/op       0 B/op          0 allocs/op
+BenchmarkTableSquare/Square_1-8      1000000000               0.0000001 ns/op       0 B/op          0 allocs/op
+```
+
+**What the columns mean:**
+
+| Column | Meaning | Example |
+|--------|---------|---------|
+| `BenchmarkSquare-8` | Benchmark name + number of CPU cores | `-8` = 8 cores |
+| `1000000000` | Number of iterations (`b.N`) | 1 billion iterations |
+| `0.3269 ns/op` | Nanoseconds **per operation** (lower = faster) | 0.3 nanoseconds — very fast! |
+| `0 B/op` | Bytes allocated **per operation** (lower = better) | 0 — no allocations |
+| `0 allocs/op` | Number of memory allocations per operation | 0 — no heap allocs |
+
+> **Benchmark rules of thumb:** `go test -bench=. -benchmem -run=^$` is the standard command — benchmarks only, with memory stats. If `ns/op` is suspiciously low (like `0.0000001`), the compiler may have optimized away the function call — use `result := Square(n); _ = result` to prevent that.
+
+---
+
 ### Reference
 
 | File | Purpose |
@@ -570,6 +662,7 @@ go test -v -run TestTableFunction/Test3
 | `test/sample_skip_test.go` | `t.Skip` — conditional test skipping |
 | `test/sample_sub_test.go` | Subtests with `t.Run` — nested test groups |
 | `test/sample_table_test.go` | Table-driven test with testify + subtests |
+| `test/sample_brenchmark_test.go` | Benchmark — performance testing with `testing.B` |
 
 ---
 
