@@ -469,6 +469,96 @@ Output:
 
 ---
 
+### Table-Driven Tests
+
+Table-driven tests are the idiomatic Go way to test multiple inputs/outputs with minimal repetition. Define a **table** (slice of test cases), then loop and run each case as a subtest.
+
+**Pattern:**
+
+```go
+func TestSomething(t *testing.T) {
+    tests := []struct {
+        name    string   // subtest name
+        input   int
+        want    int
+    }{
+        {name: "case 1", input: 2, want: 4},
+        {name: "case 2", input: 3, want: 9},
+    }
+
+    for _, tc := range tests {
+        t.Run(tc.name, func(t *testing.T) {
+            got := MyFunction(tc.input)
+            assert.Equal(t, tc.want, got)
+        })
+    }
+}
+```
+
+**Example — `test/sample_table_test.go`:**
+
+```go
+package test
+
+import (
+	"testing"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestTableFunction(t *testing.T) {
+	squareTests := []struct {
+		name    string
+		expect  int
+		request int
+	}{
+		{name: "Test1", expect: 1,  request: 1},
+		{name: "Test2", expect: 4,  request: 2},
+		{name: "Test3", expect: 9,  request: 3},
+		{name: "Test4", expect: 16, request: 4},
+		{name: "Test5", expect: 25, request: 5},
+	}
+
+	for _, test := range squareTests {
+		t.Run(test.name, func(t *testing.T) {
+			got := Square(test.request)
+			assert.Equal(t, test.expect, got)
+		})
+	}
+}
+```
+
+Output:
+
+```
+=== RUN   TestTableFunction
+=== RUN   TestTableFunction/Test1
+=== RUN   TestTableFunction/Test2
+...
+--- PASS: TestTableFunction (0.00s)
+    --- PASS: TestTableFunction/Test1 (0.00s)
+    --- PASS: TestTableFunction/Test2 (0.00s)
+    --- PASS: TestTableFunction/Test3 (0.00s)
+    --- PASS: TestTableFunction/Test4 (0.00s)
+    --- PASS: TestTableFunction/Test5 (0.00s)
+```
+
+**Run a single case:**
+
+```bash
+go test -v -run TestTableFunction/Test3
+```
+
+| Benefit | Why |
+|---------|-----|
+| **Add cases easily** | Just add a new row to the struct slice |
+| **No copy-paste** | One test function, one loop — handles all cases |
+| **Clear failure output** | Test name tells you exactly which case failed |
+| **Combines with testify** | `assert.Equal` makes assertions one-liners |
+
+> Table-driven tests are the **standard pattern** in Go. Even the standard library uses them extensively. Practice this pattern until it becomes second nature.
+
+---
+
 ### Reference
 
 | File | Purpose |
@@ -479,6 +569,7 @@ Output:
 | `test/sample_main_test.go` | `TestMain` — global setup/teardown hook |
 | `test/sample_skip_test.go` | `t.Skip` — conditional test skipping |
 | `test/sample_sub_test.go` | Subtests with `t.Run` — nested test groups |
+| `test/sample_table_test.go` | Table-driven test with testify + subtests |
 
 ---
 
