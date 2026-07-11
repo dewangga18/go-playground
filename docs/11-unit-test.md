@@ -345,3 +345,159 @@ func TestMain(m *testing.M) {
 |------|---------|
 | `test/sample_calc_test.go` | All 6 failure methods with inline explanations |
 | `test/sample_calc.go` | Simple `Square()` function used in the example tests |
+| `test/sample_testify_test.go` | Testify `assert` + `require` + mock demonstrations |
+
+---
+
+### Testify — Rich Assertions
+
+Testify (`github.com/stretchr/testify`) is a Go testing toolkit that provides expressive assertion functions, reducing boilerplate compared to raw `if` + `t.Errorf`.
+
+```go
+import "github.com/stretchr/testify/assert"
+import "github.com/stretchr/testify/require"
+```
+
+**`assert` vs `require` — same API, different failure behavior:**
+
+| Package | On failure | Analogy |
+|---------|------------|---------|
+| `assert` | Logs + continues test | Like `t.Error` / `t.Errorf` |
+| `require` | Logs + stops test immediately | Like `t.Fatal` / `t.Fatalf` |
+
+**Common assertions (available in both `assert` and `require`):**
+
+| Function | What it checks |
+|----------|----------------|
+| `Equal(t, want, got)` | Values are deeply equal |
+| `NotEqual(t, a, b)` | Values differ |
+| `Nil(t, val)` | Value is nil |
+| `NotNil(t, val)` | Value is not nil |
+| `Error(t, err)` | `err != nil` |
+| `NoError(t, err)` | `err == nil` |
+| `True(t, val)` | `val == true` |
+| `False(t, val)` | `val == false` |
+| `Empty(t, val)` | Length is 0 or zero-value |
+| `NotEmpty(t, val)` | Length > 0 |
+| `Contains(t, s, sub)` | Contains substring/item |
+| `Len(t, obj, n)` | `len(obj) == n` |
+| `IsType(t, typ, val)` | Value is expected type |
+| `Zero(t, val)` | Value is zero-value (0, "", nil, false) |
+| `NotZero(t, val)` | Value is not zero-value |
+
+**Example — `test/sample_testify_test.go`:**
+
+```go
+func TestFuncAssertion(t *testing.T) {
+	assert.Equal(t, 123, 123)
+	assert.NotEqual(t, 123, 456)
+	assert.Nil(t, nil)
+	assert.NotNil(t, 1)
+
+	err := errors.New("something went wrong")
+	assert.Error(t, err)
+	assert.NoError(t, nil)
+
+	assert.True(t, true)
+	assert.False(t, false)
+
+	users := [1]string{}
+	assert.Empty(t, users)
+
+	users[0] = "Aaron"
+	assert.NotEmpty(t, users)
+
+	assert.Contains(t, "Aaron", "ar")
+	assert.NotContains(t, "Aaron", "zz")
+	assert.Len(t, users, 1)
+	assert.IsType(t, [1]string{}, users)
+
+	assert.Zero(t, 0)
+	assert.Zero(t, "")
+	assert.NotZero(t, 1)
+}
+```
+
+**Recommendations:**
+
+| Situation | Use |
+|-----------|-----|
+| Default choice | `assert` — continue on failure, see all failures |
+| Setup guard / critical precondition | `require` — stop immediately |
+| You want standard library only | `t.Error` / `t.Fatalf` — no external deps needed |
+
+> Testify is **optional** — Go's built-in `testing` package is already powerful. Use testify when you want cleaner code (>15 assertions in one file), especially for table-driven tests with `assert.Equal` instead of `if got != want { t.Errorf(...) }`.
+
+---
+
+#### Mocking with Testify (`testify/mock`)
+
+Testify also provides a mocking framework via `github.com/stretchr/testify/mock`. It lets you create mock objects that simulate external dependencies.
+
+```go
+import "github.com/stretchr/testify/mock"
+```
+
+**Pattern — interface → mock struct → test:**
+
+```go
+// 1. Define the interface
+// File: test/sample_testify_test.go
+type UserFetcher interface {
+	FetchUser(id int) (string, error)
+}
+
+// 2. Function that depends on the interface
+func GetUserGreeting(fetcher UserFetcher, id int) string {
+	name, err := fetcher.FetchUser(id)
+	if err != nil {
+		return "Hello, Guest!"
+	}
+	return "Hello, " + name + "!"
+}
+
+// 3. Mock struct that implements the interface
+type MockUserFetcher struct {
+	mock.Mock
+}
+
+func (m *MockUserFetcher) FetchUser(id int) (string, error) {
+	args := m.Called(id)
+	return args.String(0), args.Error(1)
+}
+```
+
+**4. Using the mock in a test:**
+
+```go
+func TestGetUserGreeting(t *testing.T) {
+	// success case — user found
+	mockFetcher := new(MockUserFetcher)
+	mockFetcher.On("FetchUser", 1).Return("Aaron", nil)
+
+	result := GetUserGreeting(mockFetcher, 1)
+	assert.Equal(t, "Hello, Aaron!", result)
+	mockFetcher.AssertExpectations(t)
+
+	// error case — user not found
+	mockFetcher2 := new(MockUserFetcher)
+	mockFetcher2.On("FetchUser", 999).Return("", errors.New("not found"))
+
+	result2 := GetUserGreeting(mockFetcher2, 999)
+	assert.Equal(t, "Hello, Guest!", result2)
+	mockFetcher2.AssertExpectations(t)
+}
+```
+
+**Key mock methods:**
+
+| Method | Description |
+|--------|-------------|
+| `mockObj.On(method, args...).Return(values...)` | Set up expected call + return values |
+| `mockObj.AssertExpectations(t)` | Verify all expected calls were actually made |
+| `mockObj.AssertCalled(t, method, args...)` | Assert a specific method was called with specific args |
+| `args.Get(0).(string)` | Get return value by index with type assertion |
+| `args.String(0)` | Shorthand for string return value |
+| `args.Error(1)` | Shorthand for error return value |
+
+> **Mocking rule of thumb:** Mock **interfaces**, not implementations. Your function should accept an interface so you can swap real implementations with mocks in tests. This makes tests fast, isolated, and reliable.

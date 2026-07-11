@@ -5,6 +5,37 @@ Module management, build, and run commands for a Go project.
 - `go mod init <module-name>` — initializes a Go project
 - `basic-module` → the module name used in import paths
 
+### `go.mod` — Direct vs Indirect Dependencies
+
+```bash
+go.mod
+```
+
+Every Go module has a `go.mod` file. It lists all dependencies — both direct and indirect.
+
+```gomod
+require (
+	github.com/joho/godotenv v1.5.1
+	github.com/stretchr/testify v1.11.1
+)
+
+require (
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
+)
+```
+
+**Why two `require` blocks?**
+
+| Block | Labels | What it means |
+|-------|--------|---------------|
+| First `require` | *(no label)* | **Direct dependencies** — packages we `import` in our code (e.g. `godotenv`, `testify`) |
+| Second `require` | `// indirect` | **Transitive dependencies** — packages that our direct dependencies need internally. We never `import` them directly |
+
+> `go mod tidy` automatically separates them. Direct deps go in the first block, transitive deps go in the second with `// indirect`. Never edit `go.mod` by hand — let `go mod tidy` manage it.
+<br>
+
 ### `go mod download`
 
 ```bash
