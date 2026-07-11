@@ -1,4 +1,4 @@
-module basic-module
+module goplayground
 
 go 1.24.1
 

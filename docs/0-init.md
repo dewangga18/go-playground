@@ -3,7 +3,7 @@
 Module management, build, and run commands for a Go project.
 
 - `go mod init <module-name>` — initializes a Go project
-- `basic-module` → the module name used in import paths
+- `goplayground` → the module name used in import paths
 
 ### `go.mod` — Direct vs Indirect Dependencies
 

@@ -1,16 +1,75 @@
 ## Go Package & Import
 
+Every `.go` file starts with `package <name>` — it's the first line of code. This declares which **group** the file belongs to.
+
+```go
+package helper   // this file belongs to the "helper" group
+package db       // this file belongs to the "db" group
+package main     // this file belongs to the "main" group (executable)
+```
+
+**Think of a package like a folder/category for your code:**
+
+| Aspect | Explanation |
+|--------|-------------|
+| **Same package** = same group | Files in the same folder usually share the same `package` name. They can use each other's functions **without import** — including lowercase (private) ones |
+| **Different package** = different group | If you want to use code from another package, you **must import** it first. And you can only access **uppercase (exported)** symbols |
+| **Folder ≈ Package** | Convention: the package name matches the folder name. `helper/` folder → `package helper` |
+
+**Example — same package, no import needed:**
+
+```go
+// File: myfolder/calc.go
+package myfolder
+
+func add(a, b int) int {     // lowercase → private to this package
+	return a + b
+}
+
+func Add(a, b int) int {     // uppercase → exported
+	return a + b
+}
+```
+
+```go
+// File: myfolder/main.go  ← same package!
+package myfolder
+
+func Process() {
+	result := add(2, 3)  // ✅ works — same package, even though lowercase!
+	result2 := Add(2, 3) // ✅ works too
+}
+```
+
+**Different package — must import:**
+
+```go
+// File: cmd/app.go  ← different package!
+package main
+
+import "goplayground/myfolder"  // must import to use code from myfolder
+
+func main() {
+	// result := myfolder.add(2, 3)  // ❌ compilation error — lowercase = private
+	result := myfolder.Add(2, 3)     // ✅ works — uppercase = exported
+}
+```
+
+> **Key rule:** `add` (lowercase) is visible **only inside** the `myfolder` package. `Add` (uppercase) is visible **to everyone** who imports `myfolder`. This is how Go enforces encapsulation — no `private`/`public` keywords, just case.
+
+---
+
 Custom packages (`helper`, `db`, `blank`) live under `basics/example-package/`.
 
 ### Package Import
 
-Import path starts from module root (`basic-module`), not project root.
+Import path starts from module root (`goplayground`), not project root.
 
 ```go
 import(
     "fmt"
-    "basic-module/basics/example-package/helper"
-    "basic-module/basics/example-package/db"
+    "goplayground/basics/example-package/helper"
+    "goplayground/basics/example-package/db"
 )
 ```
 
@@ -85,7 +144,7 @@ Sometimes you need a package's `init()` to run without using its exported symbol
 
 ```go
 import(
-    _ "basic-module/basics/example-package/blank" // trigger init only
+    _ "goplayground/basics/example-package/blank" // trigger init only
 )
 ```
 

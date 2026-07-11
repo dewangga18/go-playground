@@ -1,10 +1,10 @@
 package main
 
-import(
+import (
 	"fmt"
-	"basic-module/basics/example-package/helper"
-	"basic-module/basics/example-package/db"
-	_ "basic-module/basics/example-package/blank" // blank identifier used to force initialization of package's init function
+	_ "goplayground/basics/example-package/blank" // blank identifier used to force initialization of package's init function
+	"goplayground/basics/example-package/db"
+	"goplayground/basics/example-package/helper"
 )
 
 // func main() {
