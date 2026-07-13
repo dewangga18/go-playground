@@ -55,7 +55,7 @@ fmt.Println("ups") // ← runs immediately, doesn't wait for HelloWorld
 
 ### Example from the Codebase
 
-**File: `concurrency/0-simple.go`**
+**File: `concurrency/0_simple_test.go`**
 
 ```go
 package concurrency
@@ -201,7 +201,325 @@ ok      goplayground/concurrency        0.906s
 | **Need synchronization** | Goroutines exit when the program exits — use `WaitGroup`, channels, or `time.Sleep` to coordinate (more on this later) |
 | **No special hardware needed** | Goroutines work on any machine — concurrency != parallelism |
 
-> **What we'll learn next:** Channels (`chan`), `sync.WaitGroup`, `select` statement, and proper goroutine synchronization patterns.
+> **Next up:** `sync.WaitGroup` and more advanced goroutine synchronization patterns.
+
+---
+
+## Go Channel
+
+Channels (`chan`) are Go's built-in mechanism for communication **between** goroutines. Think of a channel as a pipe — one goroutine sends data in, another receives data out.
+
+| Channel concept | Syntax | What it does |
+|----------------|--------|--------------|
+| **Unbuffered channel** | `make(chan Type)` | Blocks until both sender & receiver are ready — synchronous handoff |
+| **Buffered channel** | `make(chan Type, N)` | Non-blocking until buffer (N) is full — async send |
+| **Send** | `ch <- value` | Send data into the channel |
+| **Receive** | `<- ch` | Receive data from the channel |
+| **Close** | `close(ch)` | Signal that no more data will be sent |
+| **Direction** | `chan<-` / `<-chan` | Restrict channel to send-only or receive-only (for function params) |
+
+```go
+ch := make(chan string)        // unbuffered channel
+ch := make(chan string, 5)      // buffered channel (capacity 5)
+
+ch <- "hello"                    // send
+result := <-ch                   // receive
+
+close(ch)                        // close the channel
+```
+
+---
+
+### 1. Unbuffered Channel — Basic Send & Receive
+
+**File: `concurrency/2_channel_test.go` — `TestChannel`**
+
+Unbuffered channels are **synchronous**. The sender blocks until a receiver is ready, and the receiver blocks until a sender is ready.
+
+```go
+func TestChannel(t *testing.T) {
+	ch := make(chan string)
+	defer close(ch)
+
+	go func() {
+		time.Sleep(2 * time.Second)
+		ch <- "Uhuyyyy"
+		fmt.Println("completed channel")
+	}()
+
+	result := <-ch      // ← blocks here for ~2s until data arrives
+	fmt.Println(result)
+}
+```
+
+**How it works:**
+
+| Step | What happens |
+|------|--------------|
+| `make(chan string)` | Creates an unbuffered channel that carries `string` values |
+| `go func() { ... }()` | Launches goroutine that sleeps 2s, then sends `"Uhuyyyy"` |
+| `result := <-ch` | Main goroutine **blocks** — waits for data to arrive |
+| `ch <- "Uhuyyyy"` | Goroutine sends — immediately unblocks the main goroutine |
+| `fmt.Println(result)` | Main goroutine prints `"Uhuyyyy"` |
+| `fmt.Println("completed channel")` | Goroutine prints after successful send |
+
+**Output:**
+
+```bash
+$ go test -v -run TestChannel ./concurrency/
+
+Uhuyyyy
+completed channel
+--- PASS: TestChannel (2.00s)
+```
+
+> **Note:** `"Uhuyyyy"` prints first because the main goroutine receives and prints **immediately** when data arrives. The sender goroutine prints `"completed channel"` right after the send completes — but that happens after the main goroutine has already woken up and printed.
+
+---
+
+### 2. Channel as Parameter
+
+**File: `concurrency/2_channel_test.go` — `TestChannelAsParams`**
+
+Channels are **reference types** — passing a channel to a function passes the same channel, not a copy.
+
+```go
+func GiveMeResponse(ch chan string) {
+	time.Sleep(1 * time.Second)
+	ch <- "Sample Response"
+}
+
+func TestChannelAsParams(t *testing.T) {
+	ch := make(chan string)
+	defer close(ch)
+
+	go GiveMeResponse(ch)   // ← pass channel to goroutine
+	result := <-ch           // ← receive the response
+	fmt.Println(result)
+}
+```
+
+```bash
+$ go test -v -run TestChannelAsParams ./concurrency/
+
+Sample Response
+--- PASS: TestChannelAsParams (1.00s)
+```
+
+> **Key insight:** This is the most common Go pattern — launch a goroutine, give it a channel, and wait for the result. It's how goroutines "return" values.
+
+---
+
+### 3. Channel Direction — Send-only & Receive-only
+
+**File: `concurrency/2_channel_test.go` — `TestInOutChannel`**
+
+You can restrict a channel parameter to **send-only** (`chan<-`) or **receive-only** (`<-chan`). This makes the intent clear and prevents bugs.
+
+```go
+// Send-only: can only write to this channel
+func OnlyInChannel(ch chan<- string) {
+	time.Sleep(1 * time.Second)
+	ch <- "Sample Response"
+	// x := <-ch   // ← COMPILE ERROR: can't receive from send-only channel
+}
+
+// Receive-only: can only read from this channel
+func OnlyOutChannel(ch <-chan string) {
+	result := <-ch
+	fmt.Println(result)
+	// ch <- "data"   // ← COMPILE ERROR: can't send to receive-only channel
+}
+
+func TestInOutChannel(t *testing.T) {
+	ch := make(chan string)
+	defer close(ch)
+
+	go OnlyInChannel(ch)   // ← goroutine sends
+	go OnlyOutChannel(ch)  // ← goroutine receives
+
+	time.Sleep(2 * time.Second) // ← wait for both to finish
+}
+```
+
+```bash
+$ go test -v -run TestInOutChannel ./concurrency/
+
+Sample Response
+--- PASS: TestInOutChannel (2.00s)
+```
+
+| Direction | Syntax | Can send? | Can receive? |
+|-----------|--------|-----------|--------------|
+| **Bidirectional** | `chan string` | ✅ Yes | ✅ Yes |
+| **Send-only** | `chan<- string` | ✅ Yes | ❌ No (compile error) |
+| **Receive-only** | `<-chan string` | ❌ No (compile error) | ✅ Yes |
+
+> **Why use direction?** It's a contract — `OnlyInChannel` says "I only write to this channel" and `OnlyOutChannel` says "I only read from this channel". The compiler enforces it. This is a best practice in Go.
+
+---
+
+### 4. Buffered Channel
+
+**File: `concurrency/2_channel_test.go` — `TestBufferChannel`**
+
+Buffered channels have a **capacity**. The sender doesn't block until the buffer is full. The receiver doesn't block until the buffer is empty.
+
+```go
+func TestBufferChannel(t *testing.T) {
+	ch := make(chan string, 3)   // ← buffer capacity = 3
+	defer close(ch)
+
+	time.Sleep(1 * time.Second)
+	ch <- "Sample one"           // OK: buffer = [one]
+	ch <- "Sample two"           // OK: buffer = [one, two]
+	ch <- "Sample three"         // OK: buffer = [one, two, three]
+	// ch <- "Sample four"        // ← BLOCK: buffer full!
+
+	fmt.Println("Capacity: ", cap(ch))  // 3
+	fmt.Println("Length: ", len(ch))    // 3
+
+	fmt.Println(<-ch)  // "Sample one"   → buffer = [two, three]
+	fmt.Println(<-ch)  // "Sample two"   → buffer = [three]
+	fmt.Println(<-ch)  // "Sample three" → buffer = []
+	// fmt.Println(<-ch) // ← BLOCK: buffer empty!
+}
+```
+
+**Output:**
+
+```bash
+$ go test -v -run TestBufferChannel ./concurrency/
+
+Capacity:  3
+Length:  3
+Sample one
+Sample two
+Sample three
+--- PASS: TestBufferChannel (1.00s)
+```
+
+| State | Can send? | Can receive? |
+|-------|-----------|--------------|
+| **Buffer empty** | ✅ Yes | ❌ Blocks (no data) |
+| **Buffer partially filled** | ✅ Yes | ✅ Yes |
+| **Buffer full** | ❌ Blocks (no room) | ✅ Yes |
+
+> **When to use buffered channels:** When you want to decouple sender and receiver — the sender can keep working even if the receiver isn't ready yet. But careful: buffered channels can hide synchronization bugs.
+
+---
+
+### 5. Range over Channel
+
+**File: `concurrency/2_channel_test.go` — `TestRangeChannel`**
+
+You can use `for ... range` to receive values from a channel **until it's closed**.
+
+```go
+func TestRangeChannel(t *testing.T) {
+	ch := make(chan string)
+
+	go func() {
+		for i := 1; i <= 10; i++ {
+			ch <- "Data " + strconv.Itoa(i)
+		}
+		close(ch)   // ← MUST close, or range will deadlock
+	}()
+
+	for data := range ch {          // ← loops until channel is closed
+		fmt.Println("Data: ", data)
+	}
+	fmt.Println("Range Done")
+}
+```
+
+**Output:**
+
+```bash
+$ go test -v -run TestRangeChannel ./concurrency/
+
+Data:  Data 1
+Data:  Data 2
+Data:  Data 3
+Data:  Data 4
+Data:  Data 5
+Data:  Data 6
+Data:  Data 7
+Data:  Data 8
+Data:  Data 9
+Data:  Data 10
+Range Done
+--- PASS: TestRangeChannel (0.00s)
+```
+
+> **Critical rule:** Always `close(ch)` when the sender is done. Without `close()`, `for ... range ch` blocks **forever** waiting for more data — that's a **deadlock** (and Go will crash with `fatal error: all goroutines are asleep - deadlock!`).
+
+---
+
+### 6. Select Statement — Waiting on Multiple Channels
+
+**File: `concurrency/2_channel_test.go` — `TestSelectChannel`**
+
+`select` lets a goroutine **wait on multiple channel operations** — it picks whichever one is ready first.
+
+```go
+func TestSelectChannel(t *testing.T) {
+	ch1 := make(chan string)
+	ch2 := make(chan string)
+	channels := [...]chan string{ch1, ch2}
+	defer close(ch1)
+	defer close(ch2)
+
+	go GiveMeResponse(ch1)
+	go GiveMeResponse(ch2)
+
+	for range len(channels) {
+		select {
+		case data := <-ch1:
+			fmt.Println("Data1: ", data)
+		case data := <-ch2:
+			fmt.Println("Data2: ", data)
+		}
+	}
+
+	fmt.Println("Select Done")
+}
+```
+
+**Output:**
+
+```bash
+$ go test -v -run TestSelectChannel ./concurrency/
+
+Data1:  Sample Response
+Data2:  Sample Response
+Select Done
+--- PASS: TestSelectChannel (1.00s)
+```
+
+**How `select` works:**
+
+| Scenario | Behavior |
+|----------|----------|
+| **One channel ready** | `select` executes that case immediately |
+| **Multiple channels ready** | Picks one at **random** (fair) |
+| **No channels ready** | `select` blocks until one is ready |
+| **`default` case** | If no channel is ready, runs `default` immediately (non-blocking) |
+
+> **Note:** `select` is like `switch` but **for channels**. It's the foundation of advanced concurrency patterns like timeouts, non-blocking sends, and fan-in/fan-out.
+
+---
+
+### Channel Summary
+
+| Concept | Test Function | Description |
+|---------|---------------|-------------|
+| **Unbuffered channel** | `TestChannel` | Synchronous handoff — sender & receiver block until both are ready |
+| **Channel as param** | `TestChannelAsParams` | Pass channel to a goroutine function — how goroutines "return" values |
+| **Direction** | `TestInOutChannel` | `chan<-` (send-only) vs `<-chan` (receive-only) — compiler-enforced contracts |
+| **Buffered channel** | `TestBufferChannel` | `make(chan T, N)` — async send until buffer is full |
+| **Range channel** | `TestRangeChannel` | `for data := range ch` — receive until channel is closed |
+| **Select** | `TestSelectChannel` | Wait on multiple channels — pick the first one ready |
 
 ---
 
@@ -209,5 +527,6 @@ ok      goplayground/concurrency        0.906s
 
 | File | Purpose |
 |------|---------|
-| `concurrency/0-simple.go` | Basic goroutine — launch a function with `go` and see concurrent execution |
+| `concurrency/0_simple_test.go` | Basic goroutine — launch a function with `go` and see concurrent execution |
 | `concurrency/1_goroutine_light_test.go` | Goroutines are lightweight — 19,999 goroutines vs sequential loop comparison |
+| `concurrency/2_channel_test.go` | Channels — basic, params, direction, buffer, range, and select |
