@@ -22,7 +22,7 @@ func TestChannel(t *testing.T) {
 }
 
 func GiveMeResponse(ch chan string) {
-	time.Sleep(1 * time.Second)
+	time.Sleep(time.Second)
 	ch <- "Sample Response"
 }
 
@@ -36,7 +36,7 @@ func TestChannelAsParams(t *testing.T) {
 }
 
 func OnlyInChannel(ch chan<- string) {
-	time.Sleep(1 * time.Second)
+	time.Sleep(time.Second)
 	ch <- "Sample Response"
 }
 
@@ -59,7 +59,7 @@ func TestBufferChannel(t *testing.T) {
 	ch := make(chan string, 3)
 	defer close(ch)
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(time.Second)
 	ch <- "Sample one"
 	ch <- "Sample two"
 	ch <- "Sample three"
@@ -76,7 +76,7 @@ func TestBufferChannel(t *testing.T) {
 
 func TestRangeChannel(t *testing.T) {
 	ch := make(chan string)
-	
+
 	go func() {
 		for i := 1; i <= 10; i++ {
 			ch <- "Data " + strconv.Itoa(i)

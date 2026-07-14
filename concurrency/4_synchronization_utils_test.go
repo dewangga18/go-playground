@@ -37,7 +37,7 @@ func TestPool(t *testing.T) {
 		go func() {
 			data := pool.Get()
 			fmt.Println(data) // some prints will be nil, cause no one is putting anything into the pool after use
-			time.Sleep(1 * time.Second)
+			time.Sleep(time.Second)
 			pool.Put(data)
 		}()
 	}
@@ -61,7 +61,7 @@ func TestPoolNew(t *testing.T) {
 		go func() {
 			data := pool.Get()
 			fmt.Println(data) // no nil prints cause New is defined, so get() will return "New" if there are no data in the pool
-			time.Sleep(1 * time.Second)
+			time.Sleep(time.Second)
 			pool.Put(data)
 		}()
 	}

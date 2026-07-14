@@ -66,7 +66,7 @@ for range 10 {
     go func() {
         data := pool.Get()
         fmt.Println(data)      // ← may print <nil> if pool is empty
-        time.Sleep(1 * time.Second)
+        time.Sleep(time.Second)
         pool.Put(data)
     }()
 }
@@ -108,7 +108,7 @@ for range 10 {
     go func() {
         data := pool.Get()
         fmt.Println(data)       // ← never <nil> — returns "New" when empty
-        time.Sleep(1 * time.Second)
+        time.Sleep(time.Second)
         pool.Put(data)
     }()
 }

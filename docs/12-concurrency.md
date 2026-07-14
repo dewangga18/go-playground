@@ -74,7 +74,7 @@ func TestHelloWorld(t *testing.T) {
 	go HelloWorld()            // ← goroutine: runs concurrently
 	fmt.Println("ups")         // ← main goroutine prints immediately
 
-	time.Sleep(1 * time.Second) // ← wait so the program doesn't exit early
+	time.Sleep(time.Second) // ← wait so the program doesn't exit early
 }
 ```
 
@@ -84,7 +84,7 @@ func TestHelloWorld(t *testing.T) {
 |------|--------------|
 | `go HelloWorld()` | Launches `HelloWorld` as a **goroutine** — it starts running but the main goroutine does NOT wait |
 | `fmt.Println("ups")` | Main goroutine prints `"ups"` immediately — this usually runs **before** HelloWorld's print |
-| `time.Sleep(1 * time.Second)` | Main goroutine pauses for 1 second — gives the HelloWorld goroutine time to finish |
+| `time.Sleep(time.Second)` | Main goroutine pauses for 1 second — gives the HelloWorld goroutine time to finish |
 
 **Output:**
 
@@ -102,7 +102,7 @@ Hello world
 
 ### What Happens Without `time.Sleep`?
 
-If you remove `time.Sleep(1 * time.Second)`:
+If you remove `time.Sleep(time.Second)`:
 
 ```go
 func TestHelloWorld(t *testing.T) {
@@ -410,7 +410,7 @@ Channels are **reference types** — passing a channel to a function passes the 
 
 ```go
 func GiveMeResponse(ch chan string) {
-	time.Sleep(1 * time.Second)
+	time.Sleep(time.Second)
 	ch <- "Sample Response"
 }
 
@@ -444,7 +444,7 @@ You can restrict a channel parameter to **send-only** (`chan<-`) or **receive-on
 ```go
 // Send-only: can only write to this channel
 func OnlyInChannel(ch chan<- string) {
-	time.Sleep(1 * time.Second)
+	time.Sleep(time.Second)
 	ch <- "Sample Response"
 	// x := <-ch   // ← COMPILE ERROR: can't receive from send-only channel
 }
@@ -495,7 +495,7 @@ func TestBufferChannel(t *testing.T) {
 	ch := make(chan string, 3)   // ← buffer capacity = 3
 	defer close(ch)
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(time.Second)
 	ch <- "Sample one"           // OK: buffer = [one]
 	ch <- "Sample two"           // OK: buffer = [one, two]
 	ch <- "Sample three"         // OK: buffer = [one, two, three]
