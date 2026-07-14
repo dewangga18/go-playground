@@ -1913,6 +1913,73 @@ fmt.Println("All workers finished")
 
 ---
 
+**`sync.Map` — Concurrent-Safe Map**
+
+A normal `map` in Go panics with `fatal error: concurrent map writes` if multiple goroutines write without synchronization. `sync.Map` handles this internally.
+
+```go
+var syncMap sync.Map
+var wg sync.WaitGroup
+
+for i := 1; i <= 20; i++ {
+    wg.Add(1)
+    go func() {
+        defer wg.Done()
+        syncMap.Store(i, i)
+    }()
+}
+
+wg.Wait()
+
+syncMap.Range(func(key, value any) bool {
+    fmt.Println(key, value)
+    return true
+})
+```
+
+**Key methods:**
+
+| Method | Description |
+|--------|-------------|
+| `Store(key, value)` | Stores a key-value pair — safe for concurrent writes |
+| `Load(key)` | Retrieves a value by key — returns `(value, ok)` |
+| `Delete(key)` | Deletes a key-value pair |
+| `LoadOrStore(key, value)` | Returns existing value if key exists, otherwise stores and returns the new value |
+| `Range(fn)` | Iterates over all key-value pairs — `fn` returns `false` to stop |
+
+> **When to use:** Write-once-read-many caches, or when goroutines write to different keys (disjoint keysets). For most cases, a regular `map` with `sync.Mutex` is simpler and faster.
+
+---
+
+**`sync.Cond` — Condition Variable**
+
+Lets goroutines **wait** for a signal and **resume** when the condition is met. Two ways to wake waiters:
+
+| Method | Behavior |
+|--------|----------|
+| `Signal()` | Wakes **one** waiting goroutine |
+| `Broadcast()` | Wakes **all** waiting goroutines |
+
+```go
+cond := sync.NewCond(&sync.Mutex{})
+
+// Waiter goroutine — blocks until signaled
+cond.L.Lock()
+cond.Wait()      // ← unlocks L while waiting, re-locks before returning
+fmt.Println("Done")
+cond.L.Unlock()
+
+// Signaller — wakes one waiter
+cond.Signal()
+
+// Or wake all waiters at once
+// cond.Broadcast()
+```
+
+> **Important:** `cond.Wait()` automatically unlocks the mutex while waiting and re-locks before returning — this is how other goroutines can acquire the lock to signal. Without `Signal()` or `Broadcast()`, all waiters block forever.
+
+---
+
 **Common Deadlock Pattern & Fix**
 
 **Deadlock** happens when two goroutines each hold a lock and wait for the other's lock — a circular wait that hangs forever.
@@ -1968,6 +2035,66 @@ func TransferSafe(to, from *UserBalance, amount int) {
 | **`sync.Once`** | Wedding speech (you say it once) | Lazy initialization, singleton setup |
 | **`sync.Pool`** | Borrow/fork at cafeteria (grab, use, return) | Heavy allocations — reduce GC pressure |
 | **`sync.WaitGroup`** | Race start/finish line (wait for all runners) | Need to wait for goroutines to finish |
+| **`sync.Map`** | Shared office whiteboard (anyone can write, anyone can read) | Concurrent-safe map — write-once-read-many |
+| **`sync.Cond`** | Conductor's baton (wait for signal, then play) | Event-driven goroutine wake-up |
+
+---
+
+### `sync/atomic` — Atomic Operations
+
+```go
+import "sync/atomic"
+```
+
+**Lock-free** atomic operations — uses CPU-level instructions instead of OS locks. Faster than `sync.Mutex` for simple operations like counters and flags.
+
+**Functions & types:**
+
+| Function / Type | Description |
+|-----------------|-------------|
+| `atomic.AddInt64(ptr, delta)` | Atomically adds `delta` to `*ptr` — returns the new value |
+| `atomic.LoadInt64(ptr)` | Atomically reads `*ptr` — safe while other goroutines write |
+| `atomic.StoreInt64(ptr, val)` | Atomically writes `val` to `*ptr` — safe while other goroutines read |
+| `atomic.CompareAndSwapInt64(ptr, old, new)` | If `*ptr == old`, set to `new` and return `true` — atomic check-and-set |
+| `atomic.Int32` / `atomic.Int64` | **Typed wrappers** (Go 1.19+) — `.Add()`, `.Load()`, `.Store()`, `.CompareAndSwap()` as methods |
+
+**Example — Lock-free counter:**
+
+```go
+var counter int64 = 0
+
+for range 100 {
+    go func() {
+        for j := 1; j <= 33; j++ {
+            atomic.AddInt64(&counter, 1)    // ← no mutex needed
+        }
+    }()
+}
+
+// Safe read
+fmt.Println("Counter:", atomic.LoadInt64(&counter))
+```
+
+**Example — CompareAndSwap (CAS) — one-shot initialization:**
+
+```go
+var running atomic.Int32
+
+if running.CompareAndSwap(0, 1) {
+    fmt.Println("Server started")     // ← only one goroutine succeeds
+} else {
+    fmt.Println("Already running")    // ← the rest see this
+}
+```
+
+| Scenario | Use `sync.Mutex` | Use `sync/atomic` |
+|----------|-----------------|-------------------|
+| Complex data structures | ✅ | ❌ |
+| Simple counter | ❌ (overkill) | ✅ |
+| Long critical sections | ✅ | ❌ |
+| Quick flag/status check | ❌ (overkill) | ✅ |
+
+> **When to use `sync/atomic`:** Simple counters, flags, and status values. CAS is perfect for leader election, throttling, and one-shot initialization. For complex data or long operations, stick with `sync.Mutex`. The typed wrappers (`atomic.Int32`, `atomic.Int64`) are cleaner than the function-based versions — use them when on Go 1.19+.
 
 ---
 

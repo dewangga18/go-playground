@@ -3,6 +3,7 @@ package concurrency
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -319,4 +320,125 @@ func TestAnotherPool(t *testing.T) {
 }
 
 // #
+func TestSyncMap(t *testing.T) {
+	var syncMap sync.Map
+	var wg sync.WaitGroup
 
+	for i := 1; i <= 20; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			syncMap.Store(i, i)
+		}()
+	}
+
+	wg.Wait()
+
+	syncMap.Range(func(key, value any) bool {
+		fmt.Println(key, value)
+		return true
+	})
+}
+
+// #
+func TestSyncCond(t *testing.T) {
+	cond := sync.NewCond(&sync.Mutex{})
+	group := &sync.WaitGroup{}
+
+	for i := 1; i <= 10; i++ {
+		group.Add(1)
+		// wait condition
+		go func() {
+			cond.L.Lock()
+			cond.Wait()
+			fmt.Println("Done", i)
+			cond.L.Unlock()
+			group.Done()
+		}()
+	}
+
+	go func() {
+		for range 10 {
+			time.Sleep(10 * time.Millisecond)
+			cond.Signal() // without this will blocked forever or deadlock
+		}
+	}()
+
+	group.Wait()
+}
+
+func TestSyncCondBroadcast(t *testing.T) {
+	cond := sync.NewCond(&sync.Mutex{})
+	group := &sync.WaitGroup{}
+
+	for i := 1; i <= 10; i++ {
+		group.Add(1)
+		// wait condition
+		go func() {
+			cond.L.Lock()
+			cond.Wait()
+			fmt.Println("Done", i)
+			cond.L.Unlock()
+			group.Done()
+		}()
+	}
+
+	go func() {
+		time.Sleep(10 * time.Millisecond)
+		cond.Broadcast()
+	}()
+
+	group.Wait()
+}
+
+// #
+func TestAtomicInt64(t *testing.T) {
+	var wg sync.WaitGroup
+	var counter int64 = 0
+	for range 100 {
+		wg.Add(1)
+
+		go func() {
+			for j := 1; j <= 33; j++ {
+				atomic.AddInt64(&counter, 1)
+			}
+
+			wg.Done()
+		}()
+	}
+
+	wg.Wait()
+
+	fmt.Println("Counter Load", atomic.LoadInt64(&counter))
+	fmt.Println("Counter", counter)
+}
+
+func TestAtomicCompareAndSwap(t *testing.T) {
+	var running atomic.Int32
+	var wg sync.WaitGroup
+
+	for range 10 {
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+
+			if running.CompareAndSwap(0, 1) {
+				fmt.Println("Server started")
+
+				time.Sleep(time.Second)
+
+				// server stopped
+				running.Store(0)
+
+				fmt.Println("Server stopped")
+			} else {
+				fmt.Println("Already running")
+			}
+		}()
+	}
+
+	wg.Wait()
+
+	fmt.Println("Running:", running.Load())
+}
