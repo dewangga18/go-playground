@@ -1675,6 +1675,302 @@ fmt.Println(notAdjacent)       // [1 2 1 2 3] — no change
 
 ---
 
+### `sync` — Goroutine Synchronization
+
+```go
+import "sync"
+```
+
+The `sync` package provides primitives for safely coordinating access to shared data across goroutines. When multiple goroutines read **and** write the same variable, you need synchronization — otherwise you get **race conditions** (unpredictable, wrong results).
+
+**Important types & methods:**
+
+| Type | Method | Description |
+|------|--------|-------------|
+| **`sync.Mutex`** | `Lock()` / `Unlock()` | Exclusive lock — only one goroutine at a time. Blocks if another goroutine holds the lock |
+| **`sync.RWMutex`** | `Lock()` / `Unlock()` | Exclusive **write** lock — blocks all readers AND writers |
+| | `RLock()` / `RUnlock()` | Shared **read** lock — blocks writers only, other readers can proceed in parallel |
+| **`sync.Once`** | `.Do(fn)` | Calls `fn` **exactly once**, no matter how many goroutines call `.Do()` — thread-safe lazy initialization |
+| **`sync.Pool`** | `.Get()` | Gets an object from the pool — returns `any`. Returns `nil` if pool is empty and `New` is not set |
+| | `.Put(x)` | Returns an object to the pool for reuse |
+| | `.New` | Field: `func() any` — called by `.Get()` when the pool is empty to create a new object |
+| **`sync.WaitGroup`** | `.Add(delta)` | Increments the counter by `delta` — call **before** launching a goroutine |
+| | `.Done()` | Decrements the counter by 1 — call via `defer` inside the goroutine |
+| | `.Wait()` | Blocks until the counter reaches 0 — call in the **main** goroutine to wait for all workers |
+
+---
+
+**`sync.Mutex` — Mutual Exclusion Lock**
+
+Ensures that only **one goroutine at a time** can execute the code between `Lock()` and `Unlock()`. Essential when multiple goroutines write to the same variable.
+
+```go
+var x int
+var mutex sync.Mutex
+
+for range 1000 {
+    go func() {
+        for range 100 {
+            mutex.Lock()
+            x = x + 1       // ← safe: only one goroutine at a time
+            mutex.Unlock()
+        }
+    }()
+}
+```
+
+**Without Mutex (race condition):**
+
+```go
+// x = x + 1 is actually 3 steps:
+// 1. Read x from memory
+// 2. Add 1
+// 3. Write back
+//
+// Two goroutines can read the same value, both write back the same result → one increment lost!
+// Expected: 100000, Actual: ~88000 (varies each run)
+```
+
+| Without `sync.Mutex` | With `sync.Mutex` |
+|----------------------|-------------------|
+| ✅ Fast (no locking overhead) | ❌ Slightly slower (lock/unlock overhead) |
+| ❌ Result unpredictable (race condition) | ✅ Result always correct |
+| ❌ Data corruption risk | ✅ Data integrity guaranteed |
+
+> **Rule:** Every `Lock()` **must** have a matching `Unlock()`. For functions with early returns, use `defer mutex.Unlock()` right after `Lock()`.
+
+---
+
+**`sync.RWMutex` — Read-Write Lock**
+
+Optimized for **read-heavy, write-rare** scenarios. Multiple goroutines can read in parallel, but writes get exclusive access.
+
+```go
+type BankAccount struct {
+    mu      sync.RWMutex
+    balance int
+}
+
+func (a *BankAccount) Deposit(amount int) {
+    a.mu.Lock()        // ← exclusive: no reads during write
+    a.balance += amount
+    a.mu.Unlock()
+}
+
+func (a *BankAccount) GetBalance() int {
+    a.mu.RLock()       // ← shared: multiple reads can happen simultaneously
+    defer a.mu.RUnlock()
+    return a.balance
+}
+```
+
+| Mutex type | Write behavior | Read behavior | Best for |
+|-----------|----------------|---------------|----------|
+| **`sync.Mutex`** | Exclusive (1 at a time) | Exclusive (1 at a time) | Mostly writes, or mixed |
+| **`sync.RWMutex`** | Exclusive (1 at a time) | **Shared** (many at once) | Mostly reads, rare writes |
+
+> **When to use `RWMutex`:** Config stores, caches, or any data that's read by 100 goroutines but written by only 1. For simple cases where performance doesn't matter, a regular `Mutex` is simpler and sufficient.
+
+---
+
+**`sync.Once` — Run Exactly Once**
+
+Ensures a function is executed **exactly one time**, no matter how many goroutines call `.Do()`.
+
+```go
+var once sync.Once
+var group sync.WaitGroup
+
+for range 100 {
+    group.Add(1)
+    go func() {
+        defer group.Done()
+        once.Do(func() {
+            fmt.Println("Loading config...")  // ← prints ONLY ONCE
+            time.Sleep(2 * time.Second)
+        })
+    }()
+}
+
+group.Wait()
+```
+
+```bash
+Loading config...
+--- PASS: TestOnce (2.00s)
+```
+
+| Without `sync.Once` | With `sync.Once` |
+|---------------------|------------------|
+| Load config 100x — waste | Load config once — efficient |
+| Need mutex + boolean flag | Single function call |
+| Race condition risk | Thread-safe by design |
+
+> **When to use:** Database connection pool initialization, loading config files, setting up loggers, or any "do this one time" setup that multiple goroutines might trigger simultaneously.
+
+---
+
+**`sync.Pool` — Object Reuse Pool**
+
+Temporary object store — reduces memory allocations and GC pressure by reusing objects.
+
+**Without `New` — `Get()` may return `nil`:**
+
+```go
+var pool sync.Pool
+
+pool.Put("Aaron")
+pool.Put("Evan")
+
+for range 10 {
+    go func() {
+        data := pool.Get()   // ← may return <nil> if pool is empty
+        fmt.Println(data)
+        pool.Put(data)       // ← return to pool for reuse
+    }()
+}
+```
+
+**With `New` — auto-create when empty:**
+
+```go
+pool := sync.Pool{
+    New: func() any {
+        return "New"          // ← called when pool is empty
+    },
+}
+
+pool.Put("Aaron")
+pool.Put("Evan")
+
+for range 10 {
+    go func() {
+        data := pool.Get()   // ← never nil — returns "New" when empty
+        fmt.Println(data)
+        pool.Put(data)
+    }()
+}
+```
+
+| Pool behavior | Without `New` | With `New` |
+|---------------|---------------|------------|
+| **Pool is empty** | `Get()` returns `nil` | `Get()` calls `New()` and returns a fresh object |
+| **Pool has items** | `Get()` returns existing object | `Get()` returns existing object |
+| **Best for** | Pre-warmed pool (put before get) | Dynamic allocation on demand |
+
+**Real-world pattern — reusable struct:**
+
+```go
+type Parser struct {
+    Data []byte
+}
+
+var parserPool = sync.Pool{
+    New: func() any {
+        return &Parser{}
+    },
+}
+
+func Parse(data []byte) {
+    p := parserPool.Get().(*Parser)
+    p.Data = data
+    // ... use p ...
+    p.Data = nil
+    parserPool.Put(p)   // ← return for reuse
+}
+```
+
+> **When to use `sync.Pool`:** Heavy allocation patterns — JSON parsing, buffer reuse, template execution. Objects in a pool can be **garbage collected** at any time, so don't use it for long-lived objects or connection pools. Use it for **temporary, short-lived** objects that are expensive to allocate.
+
+---
+
+**`sync.WaitGroup` — Wait for Goroutines**
+
+Lets the main goroutine **wait** for a collection of goroutines to finish.
+
+```go
+var wg sync.WaitGroup
+
+for i := 0; i < 5; i++ {
+    wg.Add(1)
+    go func(id int) {
+        defer wg.Done()
+        fmt.Println("Worker", id, "done")
+    }(i)
+}
+
+wg.Wait()   // ← blocks until all 5 goroutines call Done()
+fmt.Println("All workers finished")
+```
+
+| Method | When to call | What it does |
+|--------|-------------|--------------|
+| `wg.Add(n)` | **Before** launching goroutine | Increments the internal counter |
+| `wg.Done()` | Inside goroutine (via `defer`) | Decrements the counter by 1 |
+| `wg.Wait()` | Main goroutine (after launching) | **Blocks** until counter = 0 |
+
+> **Key pattern:** `wg.Add(1)` before `go func()` — guarantees the counter is incremented before the goroutine actually runs. Always use `defer wg.Done()` as the **first line** inside the goroutine — ensures `Done()` is called even if the goroutine panics.
+
+---
+
+**Common Deadlock Pattern & Fix**
+
+**Deadlock** happens when two goroutines each hold a lock and wait for the other's lock — a circular wait that hangs forever.
+
+```go
+func TransferDeadlock(to, from *UserBalance, amount int) {
+    to.Lock()
+    to.Change(amount)
+    time.Sleep(2 * time.Second)
+    from.Lock()       // ← may deadlock if someone else holds 'from'
+    from.Change(-amount)
+    to.Unlock()
+    from.Unlock()
+}
+```
+
+**Fix — consistent lock ordering:**
+
+```go
+func TransferSafe(to, from *UserBalance, amount int) {
+    // Always lock in alphabetical order by name
+    if to.name < from.name {
+        to.Lock()
+        from.Lock()
+    } else {
+        from.Lock()
+        to.Lock()
+    }
+    defer to.Unlock()
+    defer from.Unlock()
+
+    to.Change(amount)
+    from.Change(-amount)
+}
+```
+
+| Rule | Why |
+|------|-----|
+| **Acquire locks in consistent global order** | Prevents circular wait — if A always before B, no one can hold B and wait for A |
+| **Use `defer` for unlocking** | Ensures locks release even on panic |
+| **Minimize lock duration** | Only hold locks during shared data access |
+
+> **Race condition != Deadlock:** A race condition gives **wrong results** silently. A deadlock gives **no results** — the program hangs. Both are bad, but deadlock is usually easier to detect (obviously stuck).
+
+---
+
+**Quick Reference**
+
+| Primitive | Analogy | Use when... |
+|-----------|---------|-------------|
+| **`sync.Mutex`** | Single bathroom key (one person at a time) | Multiple goroutines write to the same data |
+| **`sync.RWMutex`** | Library reading room (many readers, one writer) | Read-heavy, write-rare scenarios |
+| **`sync.Once`** | Wedding speech (you say it once) | Lazy initialization, singleton setup |
+| **`sync.Pool`** | Borrow/fork at cafeteria (grab, use, return) | Heavy allocations — reduce GC pressure |
+| **`sync.WaitGroup`** | Race start/finish line (wait for all runners) | Need to wait for goroutines to finish |
+
+---
+
 ### `path` — URL-Style Path Operations
 
 ```go
