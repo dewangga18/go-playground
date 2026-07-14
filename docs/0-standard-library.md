@@ -2244,10 +2244,10 @@ for _, m := range mdMatches {
 **Example — Abs (absolute path):**
 
 ```go
-rel := "src/basics/hello-world.go"
+rel := "basics/0_hello_world.go"
 abs, _ := filepath.Abs(rel)
-fmt.Println("Relative:", rel)        // src/basics/hello-world.go
-fmt.Println("Absolute:", abs)        // /Users/admin/Documents/golang-playground/src/basics/hello-world.go
+fmt.Println("Relative:", rel)        // basics/0_hello_world.go
+fmt.Println("Absolute:", abs)        // /Users/admin/Documents/golang-playground/basics/0_hello_world.go
 
 cwd, _ := filepath.Abs(".")
 fmt.Println("Current dir:", cwd)    // /Users/admin/Documents/golang-playground

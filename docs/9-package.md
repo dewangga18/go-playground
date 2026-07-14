@@ -59,7 +59,7 @@ func main() {
 
 ---
 
-Custom packages (`helper`, `db`, `blank`) live under `basics/example-package/`.
+Custom packages (`helper`, `db`, `blank`) live under `basics/example_package/`.
 
 ### Package Import
 
@@ -68,8 +68,8 @@ Import path starts from module root (`goplayground`), not project root.
 ```go
 import(
     "fmt"
-    "goplayground/basics/example-package/helper"
-    "goplayground/basics/example-package/db"
+    "goplayground/basics/example_package/helper"
+    "goplayground/basics/example_package/db"
 )
 ```
 
@@ -81,7 +81,7 @@ Visibility is determined by the **first letter**:
 - **Lowercase** → unexported (private) — package-local only
 
 ```go
-// example-package/helper/helper.go
+// example_package/helper/helper.go
 package helper
 
 var ApplicationName = "Helper" // ✅ exported
@@ -107,7 +107,7 @@ fmt.Println(helper.ApplicationName)  // Helper ✅ works
 `init()` runs **automatically** when a package is imported — before `main()`.
 
 ```go
-// example-package/db/db.go
+// example_package/db/db.go
 package db
 
 var connection string
@@ -144,12 +144,12 @@ Sometimes you need a package's `init()` to run without using its exported symbol
 
 ```go
 import(
-    _ "goplayground/basics/example-package/blank" // trigger init only
+    _ "goplayground/basics/example_package/blank" // trigger init only
 )
 ```
 
 ```go
-// example-package/blank/blank.go
+// example_package/blank/blank.go
 package blank
 
 import "fmt"

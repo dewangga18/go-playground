@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	_ "goplayground/basics/example-package/blank" // blank identifier used to force initialization of package's init function
-	"goplayground/basics/example-package/db"
-	"goplayground/basics/example-package/helper"
+	_ "goplayground/basics/example_package/blank" // blank identifier used to force initialization of package's init function
+	"goplayground/basics/example_package/db"
+	"goplayground/basics/example_package/helper"
 )
 
 // func main() {

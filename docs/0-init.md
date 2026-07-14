@@ -71,7 +71,7 @@ go clean -modcache
 ## Go Build
 
 ```bash
-go build ./basics/0-hello-world.go
+go build ./basics/0_hello_world.go
 ```
 
 - Compiles source into an executable binary
@@ -80,7 +80,7 @@ go build ./basics/0-hello-world.go
 ## Go Run
 
 ```bash
-go run ./basics/0-hello-world.go
+go run ./basics/0_hello_world.go
 ```
 
 - Compile + run in one step, no binary produced
@@ -88,7 +88,7 @@ go run ./basics/0-hello-world.go
 ### With Arguments
 
 ```bash
-go run ./libraries/3-os.go arg1 arg2
+go run ./libraries/3_os.go arg1 arg2
 ```
 
 - Arguments passed after the file are available via `os.Args`
@@ -97,7 +97,7 @@ go run ./libraries/3-os.go arg1 arg2
 ### With Flags (using `flag` package)
 
 ```bash
-go run ./libraries/4-flag.go -host=localhost -port=8080 -user=root -password=123456
+go run ./libraries/4_flag.go -host=localhost -port=8080 -user=root -password=123456
 ```
 
 - Alternative to raw `os.Args` — parse named flags with `-key=value` syntax
