@@ -190,6 +190,130 @@ ok      goplayground/concurrency        0.906s
 
 ---
 
+### GOMAXPROCS — How Goroutines Map to OS Threads
+
+Goroutines don't run directly on CPU cores — they run on OS threads, and Go's **M:N scheduler** maps many goroutines (M) onto fewer OS threads (N). The `runtime` package provides functions to inspect and control this mapping.
+
+**File: `concurrency/5_gomaxprocs_test.go`**
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `runtime.NumCPU()` | `int` | Total number of **logical CPU cores** on the machine |
+| `runtime.GOMAXPROCS(n)` | `int` | If `n > 0`, sets the max OS threads for goroutines. If `n < 0` (e.g. `-1`), **returns** the current value without changing it |
+| `runtime.NumGoroutine()` | `int` | Number of goroutines currently **active** (including the one calling it) |
+
+```go
+func TestMaxProcs(t *testing.T) {
+	wg := sync.WaitGroup{}
+	fmt.Println("Number of goroutines: ", runtime.NumGoroutine())
+
+	for range 100 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			time.Sleep(time.Second)
+		}()
+	}
+
+	totalCores := runtime.NumCPU()
+	fmt.Println("Total cores: ", totalCores)
+
+	totalThread := runtime.GOMAXPROCS(-1)
+	fmt.Println("Total threads: ", totalThread)
+
+	goroutines := runtime.NumGoroutine()
+	fmt.Println("Number of goroutines: ", goroutines)
+
+	wg.Wait()
+}
+```
+
+```bash
+$ go test -v -run TestMaxProcs ./concurrency/
+
+Number of goroutines:  2
+Total cores:  8
+Total threads:  8
+Number of goroutines:  102
+--- PASS: TestMaxProcs (1.00s)
+```
+
+**What's happening here:**
+
+| Line | Output | What it means |
+|------|--------|---------------|
+| `runtime.NumGoroutine()` | `2` | Before launching goroutines — only the test goroutine + GC goroutine |
+| `runtime.NumCPU()` | `8` | This machine has 8 logical cores (4 real cores × 2 threads each) |
+| `runtime.GOMAXPROCS(-1)` | `8` | Go will use **up to 8 OS threads** to run goroutines — equals `NumCPU()` by default |
+| `runtime.NumGoroutine()` | `102` | After launching 100 goroutines + 2 existing = 102 goroutines running on just 8 threads! |
+
+> **M:N scheduling:** 102 goroutines running on top of only 8 OS threads. That's the power of Go's scheduler — it multiplexes thousands of goroutines onto a small pool of threads, switching between them efficiently.
+
+---
+
+### Changing GOMAXPROCS — More Threads?
+
+You can **change** GOMAXPROCS at runtime with `runtime.GOMAXPROCS(n)`. This doesn't create more goroutines — it increases the number of OS threads Go can use to run them.
+
+```go
+func TestChangeMaxProcs(t *testing.T) {
+	wg := sync.WaitGroup{}
+	fmt.Println("Number of goroutines: ", runtime.NumGoroutine())
+
+	for range 100 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			time.Sleep(time.Second)
+		}()
+	}
+
+	totalCores := runtime.NumCPU()
+	fmt.Println("Total cores: ", totalCores)
+
+	runtime.GOMAXPROCS(20)         // ← set to 20 OS threads
+	totalThread := runtime.GOMAXPROCS(-1)
+	fmt.Println("Total threads: ", totalThread)
+
+	goroutines := runtime.NumGoroutine()
+	fmt.Println("Number of goroutines: ", goroutines)
+
+	wg.Wait()
+}
+```
+
+```bash
+$ go test -v -run TestChangeMaxProcs ./concurrency/
+
+Number of goroutines:  2
+Total cores:  8
+Total threads:  20
+Number of goroutines:  102
+--- PASS: TestChangeMaxProcs (1.00s)
+```
+
+| Before `GOMAXPROCS(20)` | After `GOMAXPROCS(20)` |
+|-------------------------|------------------------|
+| `8` OS threads (default) | `20` OS threads (explicitly set) |
+| 102 goroutines on 8 threads | 102 goroutines on 20 threads |
+| Enough for 100 lightweight goroutines | More threads — but same 102 goroutines |
+
+> **When to change GOMAXPROCS?** Rarely. The default (`NumCPU`) is optimal for most workloads. Set it higher if goroutines do blocking system calls (e.g. file I/O) and you want more parallelism. Set it lower (e.g. `1`) for debugging or CPU-bound workloads where hyperthreading hurts performance. In Go 1.5+, GOMAXPROCS defaults to `NumCPU` — before that it defaulted to `1`.
+
+---
+
+### Goroutine Scheduler Summary
+
+| Concept | Function | Description |
+|---------|----------|-------------|
+| **CPU cores** | `runtime.NumCPU()` | Total logical cores available — 8 on this machine |
+| **OS threads** | `runtime.GOMAXPROCS(-1)` | Max threads Go can use — defaults to `NumCPU()` |
+| **Change threads** | `runtime.GOMAXPROCS(n)` | Set max threads — returns the previous value |
+| **Active goroutines** | `runtime.NumGoroutine()` | How many goroutines are running right now |
+| **M:N scheduler** | (built-in) | Go maps M goroutines onto N OS threads — 102 goroutines on 8 threads |
+
+---
+
 ### Key Takeaways
 
 | Concept | Summary |
@@ -200,6 +324,7 @@ ok      goplayground/concurrency        0.906s
 | **No guarantees** | Order of execution between goroutines is **not deterministic** |
 | **Need synchronization** | Goroutines exit when the program exits — use `WaitGroup`, channels, or `time.Sleep` to coordinate (more on this later) |
 | **No special hardware needed** | Goroutines work on any machine — concurrency != parallelism |
+| **Go scheduler (M:N)** | Go maps many goroutines onto fewer OS threads — `GOMAXPROCS` controls the N |
 
 > **Next up:** `sync.WaitGroup` and more advanced goroutine synchronization patterns.
 
@@ -510,16 +635,220 @@ Select Done
 
 ---
 
-### Channel Summary
+## Timer & Ticker — Time-Based Channels
+
+The `time` package provides channel-based timers for scheduling events. These work hand-in-hand with goroutines, channels, and `select`.
+
+**File: `concurrency/0_timer_ticker_test.go`**
+
+### What is `.C`?
+
+Both `Timer` and `Ticker` have a public field called **`.C`** — the channel where time values are sent. `C` stands for **Channel**.
+
+```go
+type Timer struct {
+    C <-chan Time  // ← channel tempat timer ngirim waktu
+}
+
+type Ticker struct {
+    C <-chan Time  // ← channel tempat ticker ngirim waktu
+}
+```
+
+Cara pakainya sama persis kaya channel biasa — tinggal `<-timer.C` atau `<-ticker.C`. Mirip kaya `.L` di `sync.Cond` yang merupakan field public buat lock, `.C` juga hardcoded dari Go standard library dan gak bisa diganti namanya.
+
+---
+
+### time.NewTimer — One-Time Event
+
+`time.NewTimer(d)` creates a timer that sends a value on `.C` **once** after duration `d`.
+
+```go
+func TestTimer(t *testing.T) {
+	timer := time.NewTimer(3 * time.Second)
+
+	fmt.Println("Timer started at ", time.Now())
+	tm := <-timer.C
+	fmt.Println("Timer triggered at ", tm)
+}
+```
+
+```bash
+$ go test -v -run TestTimer ./concurrency/
+
+Timer started at  2026-07-14 11:34:08.382042417 +0700 WIB
+Timer triggered at  2026-07-14 11:34:11.382203542 +0700 WIB
+--- PASS: TestTimer (3.00s)
+```
+
+The main goroutine **blocks** on `<-timer.C` for 3 seconds, then continues.
+
+---
+
+### time.After — Simpler One-Shot Timer
+
+`time.After(d)` returns a channel directly — same as `NewTimer(d).C`, but without the `*Timer` handle (can't stop it early).
+
+```go
+func TestAfter(t *testing.T) {
+	ch := time.After(2 * time.Second)
+
+	fmt.Println("After started at ", time.Now())
+	after := <-ch
+
+	fmt.Println("After triggered at ", after)
+}
+```
+
+```bash
+$ go test -v -run TestAfter ./concurrency/
+
+After started at  2026-07-14 11:34:11.403720084 +0700 WIB
+After triggered at  2026-07-14 11:34:13.403707209 +0700 WIB
+--- PASS: TestAfter (2.00s)
+```
+
+> **Note:** `time.After` is most commonly used in `select` blocks to add timeouts. Since there's no way to stop it, the timer lives until it fires — use `NewTimer` if you need to cancel.
+
+---
+
+### time.AfterFunc — Callback-Based Timer
+
+`time.AfterFunc(d, fn)` runs `fn` **in a new goroutine** after duration `d`. It returns a `*Timer` that you can use to stop or reset.
+
+```go
+func TestAfterFuncWithWG(t *testing.T) {
+	fmt.Println("Now", time.Now())
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+
+	time.AfterFunc(time.Second, func() {
+		fmt.Println("AfterFunc triggered at ", time.Now())
+		wg.Done()
+	})
+	wg.Wait()
+}
+```
+
+```bash
+$ go test -v -run TestAfterFuncWithWG ./concurrency/
+
+Now 2026-07-14 11:34:14.407975959 +0700 WIB
+AfterFunc triggered at  2026-07-14 11:34:15.408109792 +0700 WIB
+--- PASS: TestAfterFuncWithWG (1.00s)
+```
+
+> **Without `WaitGroup`**, the test would exit before the callback runs — because `AfterFunc` runs in a separate goroutine and doesn't block.
+
+---
+
+### time.NewTicker — Periodic Events
+
+`time.NewTicker(d)` creates a ticker that sends a value on `.C` **every** `d` duration.
+
+```go
+func TestTicker(t *testing.T) {
+	ticker := time.NewTicker(time.Second)
+
+	go func() {
+		time.Sleep(3 * time.Second)
+		fmt.Println("Stopping ticker")
+		ticker.Stop()
+	}()
+
+	// ⚠️ DEADLOCK: for range on ticker.C blocks forever even after Stop()
+	for t := range ticker.C {
+		fmt.Println(t)
+	}
+}
+```
+
+```bash
+$ go test -v -run TestTicker ./concurrency/
+2026-07-14 11:34:13.277821417 +0700 WIB
+2026-07-14 11:34:14.277814417 +0700 WIB
+Stopping ticker
+panic: test timed out after 10s  ← deadlock!
+```
+
+**What happened:** `ticker.Stop()` stops the ticker from sending, but `for range` keeps waiting for the channel to **close** — which never happens. `Stop()` does **not** close the channel.
+
+---
+
+### Fix: Ticker with Select
+
+Use `select` to listen for **both** the ticker and a stop signal:
+
+```go
+func TestTickerNoDeadlock(t *testing.T) {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+	done := make(chan struct{})
+
+	go func() {
+		time.Sleep(3 * time.Second)
+		close(done)          // ← signal: we're done
+	}()
+
+	for {
+		select {
+		case tm := <-ticker.C:
+			fmt.Println(tm)
+
+		case <-done:
+			fmt.Println("Ticker stopped")
+			return            // ← exits cleanly
+		}
+	}
+}
+```
+
+```bash
+$ go test -v -run TestTickerNoDeadlock ./concurrency/
+
+2026-07-14 11:34:13.277821417 +0700 WIB
+2026-07-14 11:34:14.277814417 +0700 WIB
+2026-07-14 11:34:15.277812333 +0700 WIB
+Ticker stopped
+--- PASS: TestTickerNoDeadlock (3.00s)
+```
+
+| Pattern | Problem | Fix |
+|---------|---------|-----|
+| `for range ticker.C` | Deadlock after `Stop()` — channel never closes | ❌ |
+| `select { case <-ticker.C: ...; case <-done: ... }` | Exits cleanly when `done` channel is closed | ✅ |
+
+> **Key rule:** `ticker.Stop()` does **not close** the channel. To stop looping on a ticker, always use `select` with a separate done channel.
+
+---
+
+### Timer & Ticker Summary
+
+| Function | Type | Channel | Stop method |
+|----------|------|---------|-------------|
+| `time.NewTimer(d)` | One-shot | `timer.C` | `timer.Stop()` returns `true` if timer hadn't fired yet |
+| `time.After(d)` | One-shot | returned channel | Cannot stop — use `NewTimer` if you need cancellation |
+| `time.AfterFunc(d, fn)` | Callback | `*Timer` returned | `timer.Stop()` returns `bool` |
+| `time.NewTicker(d)` | Periodic | `ticker.C` | `ticker.Stop()` — does **not** close channel |
+
+---
+
+### Goroutine & Channel Summary
 
 | Concept | Test Function | Description |
 |---------|---------------|-------------|
+| **Basic goroutine** | `TestHelloWorld` | Launch a function with `go` — non-blocking, returns immediately |
+| **Lightweight** | `TestWithGoroutine` | 19,999 goroutines — lightweight: ~4KB stack, thousands run fine |
+| **GOMAXPROCS** | `TestMaxProcs` / `TestChangeMaxProcs` | Inspect & change OS thread count for goroutines |
 | **Unbuffered channel** | `TestChannel` | Synchronous handoff — sender & receiver block until both are ready |
 | **Channel as param** | `TestChannelAsParams` | Pass channel to a goroutine function — how goroutines "return" values |
 | **Direction** | `TestInOutChannel` | `chan<-` (send-only) vs `<-chan` (receive-only) — compiler-enforced contracts |
 | **Buffered channel** | `TestBufferChannel` | `make(chan T, N)` — async send until buffer is full |
 | **Range channel** | `TestRangeChannel` | `for data := range ch` — receive until channel is closed |
 | **Select** | `TestSelectChannel` | Wait on multiple channels — pick the first one ready |
+| **Timer** | `TestTimer` / `TestAfter` / `TestAfterFunc` | One-shot time-based channel event |
+| **Ticker** | `TestTicker` / `TestTickerNoDeadlock` | Periodic time-based channel events with select |
 
 ---
 
@@ -528,5 +857,7 @@ Select Done
 | File | Purpose |
 |------|---------|
 | `concurrency/0_simple_test.go` | Basic goroutine — launch a function with `go` and see concurrent execution |
+| `concurrency/0_timer_ticker_test.go` | Timer & Ticker — time-based channels: NewTimer, After, AfterFunc, NewTicker, select pattern |
 | `concurrency/1_goroutine_light_test.go` | Goroutines are lightweight — 19,999 goroutines vs sequential loop comparison |
 | `concurrency/2_channel_test.go` | Channels — basic, params, direction, buffer, range, and select |
+| `concurrency/5_gomaxprocs_test.go` | GOMAXPROCS — runtime.NumCPU, runtime.GOMAXPROCS, runtime.NumGoroutine, M:N scheduler |

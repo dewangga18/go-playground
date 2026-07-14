@@ -901,6 +901,58 @@ nyc, _ := time.LoadLocation("America/New_York") // UTC-5 / -4 (DST)
 
 > **Note:** The reference time in Go is `Mon Jan 2 15:04:05 MST 2006` = `01/02 03:04:05PM '06 -0700`. It's easier to remember as "1 2 3 4 5 6 7" (month, day, hour, minute, second, year, timezone). For Indonesia, `Asia/Jakarta` is the standard IANA timezone — use `time.LoadLocation("Asia/Jakarta")` instead of hardcoding `+7`.
 
+**Timer & Ticker — Time-Based Channels:**
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `time.NewTimer(d)` | `*Timer` | One-shot timer — `.C` channel fires once after `d`. Can `Stop()` before it fires |
+| `time.After(d)` | `<-chan Time` | Returns a channel that fires once after `d` — simpler but cannot stop |
+| `time.AfterFunc(d, fn)` | `*Timer` | Runs `fn` in a goroutine after `d` — callback-style timer |
+| `time.NewTicker(d)` | `*Ticker` | Periodic ticker — `.C` channel fires every `d`. `Stop()` does **not** close the channel |
+
+**Examples:**
+
+```go
+// Timer — one-time event on channel
+func TestTimer(t *testing.T) {
+    timer := time.NewTimer(3 * time.Second)
+    fmt.Println("Timer started at ", time.Now())
+    tm := <-timer.C  // ← blocks for 3 seconds
+    fmt.Println("Timer triggered at ", tm)
+}
+
+// After — simpler one-shot channel
+ch := time.After(2 * time.Second)
+after := <-ch
+
+// AfterFunc — callback style (need WaitGroup to block)
+wg := sync.WaitGroup{}
+wg.Add(1)
+time.AfterFunc(time.Second, func() {
+    fmt.Println("AfterFunc triggered")
+    wg.Done()
+})
+wg.Wait()
+
+// Ticker — periodic, stop with select + done channel
+ticker := time.NewTicker(time.Second)
+done := make(chan struct{})
+
+for {
+    select {
+    case tm := <-ticker.C:
+        fmt.Println(tm)
+    case <-done:
+        fmt.Println("Ticker stopped")
+        return
+    }
+}
+```
+
+> **Key rule:** `ticker.Stop()` does **not** close the channel. To stop looping on a ticker, always use `select` with a separate done channel — otherwise `for range ticker.C` blocks forever (deadlock).
+
+> See also: [`docs/12-concurrency.md`](12-concurrency.md) for detailed examples of Timer, After, AfterFunc, and Ticker patterns.
+
 ---
 
 ### `time.Duration` — Time Intervals
@@ -956,6 +1008,47 @@ fmt.Println("ParseDuration min", parseDuration.Minutes()) // 150
 ```
 
 > **Note:** Durations support arithmetic (`+`, `-`, `*`, `/`). When printed with `fmt.Println`, Go automatically formats them as human-readable strings like `48m20s` or `1h30m`. This works because `time.Duration` has a custom `.String()` method. `time.ParseDuration()` accepts strings like `"300ms"`, `"2h30m"`, `"1.5s"`, `"-10m"` — supports `ns`, `us`/`µs`, `ms`, `s`, `m`, `h`. For the full list, check out the [Go Standard Library Docs](https://pkg.go.dev/std).
+
+---
+
+### `runtime` — Go Runtime Inspection
+
+```go
+import "runtime"
+```
+
+Provides access to Go's runtime system — goroutine count, CPU cores, OS thread limits, memory stats, and more.
+
+**Functions used:**
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `runtime.NumCPU()` | `int` | Total **logical CPU cores** on the machine (e.g. `8` on a 4-core with hyperthreading) |
+| `runtime.GOMAXPROCS(n)` | `int` | If `n > 0`, sets the max OS threads Go can use for goroutines. If `n < 0`, **returns** the current value without changing it. Defaults to `NumCPU()` |
+| `runtime.NumGoroutine()` | `int` | Number of goroutines currently **active** (including the caller) |
+
+**Example — inspect default values:**
+
+```go
+fmt.Println("Total cores:", runtime.NumCPU())              // 8
+fmt.Println("Total threads:", runtime.GOMAXPROCS(-1))      // 8 (defaults to NumCPU)
+fmt.Println("Active goroutines:", runtime.NumGoroutine())  // 2 (test + GC)
+```
+
+**Example — change GOMAXPROCS:**
+
+```go
+before := runtime.GOMAXPROCS(20)  // set to 20 OS threads
+after := runtime.GOMAXPROCS(-1)   // read current value
+fmt.Println("Before:", before, "After:", after)  // Before: 8, After: 20
+
+// Reset to default
+runtime.GOMAXPROCS(runtime.NumCPU())
+```
+
+> **M:N scheduler:** Go maps M goroutines onto N OS threads — `GOMAXPROCS` controls the N. The default (`NumCPU`) is optimal for most workloads. Set higher if goroutines make blocking syscalls (needs more threads). Set lower (e.g. `1`) for debugging or CPU-bound workloads. `GOMAXPROCS` defaults to `NumCPU` since Go 1.5 — before that it was `1`.
+
+> See also: [`docs/12-concurrency.md`](12-concurrency.md) for detailed GOMAXPROCS examples and M:N scheduler explanation.
 
 ---
 

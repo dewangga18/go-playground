@@ -305,6 +305,8 @@ All 10 goroutines wake up **at the same time** — notice the order is random (n
 > 3. Signallers: `cond.Signal()` for one, `cond.Broadcast()` for all
 > 4. **Important:** `cond.Wait()` **automatically unlocks** the mutex while waiting and **re-locks** before returning — this is how other goroutines can acquire the lock to signal.
 
+> **What is `.L`?** `cond.L` is the mutex you passed to `NewCond()`. `.L` stands for **Lock**. When you call `cond.L.Lock()`, you're locking that mutex. When you call `cond.Wait()`, Cond automatically unlocks `.L` so other goroutines can acquire it and call `Signal()`/`Broadcast()`. After `Wait()` returns, Cond re-locks `.L` for you automatically.
+
 > **Without `Signal()` or `Broadcast()`, all goroutines block forever** — it's a silent deadlock. Always make sure a signal will be sent.
 
 ---
