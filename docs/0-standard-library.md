@@ -1683,6 +1683,8 @@ import "sync"
 
 The `sync` package provides primitives for safely coordinating access to shared data across goroutines. When multiple goroutines read **and** write the same variable, you need synchronization — otherwise you get **race conditions** (unpredictable, wrong results).
 
+> **See also:** [`docs/13_concurrency_synchronization.md`](13_concurrency_synchronization.md) — Mutex, RWMutex, Map, Deadlock \| [`docs/14_synchronization_utils.md`](14_synchronization_utils.md) — Once, Pool, Cond, Atomic
+
 **Important types & methods:**
 
 | Type | Method | Description |
@@ -1690,13 +1692,21 @@ The `sync` package provides primitives for safely coordinating access to shared 
 | **`sync.Mutex`** | `Lock()` / `Unlock()` | Exclusive lock — only one goroutine at a time. Blocks if another goroutine holds the lock |
 | **`sync.RWMutex`** | `Lock()` / `Unlock()` | Exclusive **write** lock — blocks all readers AND writers |
 | | `RLock()` / `RUnlock()` | Shared **read** lock — blocks writers only, other readers can proceed in parallel |
+| **`sync.WaitGroup`** | `.Add(delta)` | Increments the counter by `delta` — call **before** launching a goroutine |
+| | `.Done()` | Decrements the counter by 1 — call via `defer` inside the goroutine |
+| | `.Wait()` | Blocks until the counter reaches 0 — call in the **main** goroutine to wait for all workers |
 | **`sync.Once`** | `.Do(fn)` | Calls `fn` **exactly once**, no matter how many goroutines call `.Do()` — thread-safe lazy initialization |
 | **`sync.Pool`** | `.Get()` | Gets an object from the pool — returns `any`. Returns `nil` if pool is empty and `New` is not set |
 | | `.Put(x)` | Returns an object to the pool for reuse |
 | | `.New` | Field: `func() any` — called by `.Get()` when the pool is empty to create a new object |
-| **`sync.WaitGroup`** | `.Add(delta)` | Increments the counter by `delta` — call **before** launching a goroutine |
-| | `.Done()` | Decrements the counter by 1 — call via `defer` inside the goroutine |
-| | `.Wait()` | Blocks until the counter reaches 0 — call in the **main** goroutine to wait for all workers |
+| **`sync.Map`** | `Store(key, value)` | Stores a key-value pair — safe for concurrent writes |
+| | `Load(key)` | Retrieves a value by key — returns `(value, ok)` |
+| | `Delete(key)` | Deletes a key-value pair |
+| | `Range(fn)` | Iterates over all key-value pairs — `fn` returns `false` to stop |
+| **`sync.Cond`** | `NewCond(l)` | Creates a condition variable with a mutex `l` |
+| | `Wait()` | Blocks until signaled — **auto-unlocks** mutex while waiting |
+| | `Signal()` | Wakes **one** waiting goroutine |
+| | `Broadcast()` | Wakes **all** waiting goroutines |
 
 ---
 
