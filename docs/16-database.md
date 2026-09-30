@@ -1,38 +1,20 @@
 ## Go Database (`database/sql`)
 
-How Go connects to relational databases — documented from the code in the `database/` folder.
+Connections, pooling, and inserts using the examples in [`database/`](../database/).
 
----
+## How It Works
 
-## How it works
-
-```
-App (database/sql code)
-    │
-    ▼
-Database Interface (database/sql)
-    │
-    ▼
-Database Driver (mysql, lib/pq, ...)
-    │
-    ▼
-DBMS (MySQL, PostgreSQL, ...)
+```text
+Go code -> database/sql -> driver -> database server
+                          mysql    MySQL
+                          lib/pq   PostgreSQL
 ```
 
-- Your code only talks to the `database/sql` **interface** — never directly to the DBMS.
-- The **driver** translates `database/sql` calls into the DBMS's wire protocol.
-- A full list of available drivers: https://go.dev/wiki/SQLDrivers
+Your code calls the shared `database/sql` API. The selected driver communicates with the server. The API stays the same across databases, but connection strings and SQL placeholders can differ.
 
----
+## Drivers and DSNs
 
-## Drivers used in this project
-
-| DBMS | Driver | Import | Why |
-|------|--------|--------|-----|
-| MySQL | `github.com/go-sql-driver/mysql` | `_ "github.com/go-sql-driver/mysql"` | Pure Go, de-facto standard MySQL driver |
-| PostgreSQL | `github.com/lib/pq` | `_ "github.com/lib/pq"` | Pure Go (no CGo), standard `database/sql` driver |
-
-> Drivers are imported with a **blank identifier** (`_ "..."`) — they register themselves with `database/sql` via `init()`. You never call them directly.
+Blank imports (`_`) register the drivers without calling them directly:
 
 ```go
 import (
@@ -42,102 +24,141 @@ import (
 )
 ```
 
----
+A **DSN** (Data Source Name) supplies the connection details to `sql.Open()`:
 
-## DSN formats
+| DBMS | Driver name | DSN used in this project |
+|------|-------------|-------------------------|
+| MySQL | `mysql` | `go:lang@tcp(localhost:3306)/test` |
+| PostgreSQL | `postgres` | `postgres://go:lang@localhost:5432/test?sslmode=disable` |
 
-A **DSN** (Data Source Name) is the connection string passed to `sql.Open()`.
+Both examples use database `test` and account `go` / `lang`. See [Database Setup](0-database-setup.md) for CLI and service commands.
 
-| DBMS | DSN format | Example |
-|------|------------|---------|
-| MySQL | `user:pass@tcp(host:port)/db` | `go:lang@tcp(localhost:3306)/test` |
-| PostgreSQL (lib/pq) | `postgres://user:pass@host:port/dbname?sslmode=disable` | `postgres://go:lang@localhost:5432/test?sslmode=disable` |
+## Opening and Checking Connections
 
-> ⚠️ The MySQL-style DSN (`user:pass@tcp(host:port)/db`) does **not** work for PostgreSQL — each driver expects its own format.
-
----
-
-## `sql.Open()` vs `db.Ping()`
+[`1_connection_test.go`](../database/1_connection_test.go) checks each database connection:
 
 ```go
 db, err := sql.Open("mysql", "go:lang@tcp(localhost:3306)/test")
-```
+if err != nil {
+    t.Fatal("Error opening MySQL connection:", err)
+}
+defer db.Close()
 
-| Call | What it does |
-|------|--------------|
-| `sql.Open()` | **Only validates the DSN format** — it does **not** connect to the server. Returns `(*sql.DB, error)` |
-| `db.Ping()` | **Actually connects** to the DBMS and returns an error if the server is unreachable / credentials are wrong |
-| `db.Close()` | Closes the connection pool — always `defer` it |
-
-```go
-func TestConnectionMySQL(t *testing.T) {
-    db, err := sql.Open("mysql", "go:lang@tcp(localhost:3306)/test")
-    if err != nil {
-        t.Fatal("Error opening MySQL connection:", err) // DSN invalid
-    }
-    defer db.Close()
-
-    if err := db.Ping(); err != nil {
-        t.Fatal("Error pinging MySQL:", err) // server unreachable / bad creds
-    }
-    t.Log("MySQL connection successful")
+if err := db.Ping(); err != nil {
+    t.Fatal("Error pinging MySQL:", err)
 }
 ```
 
-> A `sql.Open()` that returns `nil` error does **not** mean the DB is reachable — always follow up with `db.Ping()` (or a query).
+| Call | Purpose |
+|------|---------|
+| `sql.Open()` | Initializes a connection pool; may not connect yet |
+| `db.Ping()` | Checks connectivity, establishing a connection if needed |
+| `db.Close()` | Closes the pool when the test finishes |
 
----
+> **Note:** A successful `sql.Open()` alone does not confirm that the server is reachable.
 
-## Connection pool settings
+## Connection Pool Settings
 
-`database/2_polling_test.go` configures the pool the same way for both DBMS — the example below shows MySQL, but `GetConnectionsPostgres()` is identical except for the driver name and DSN.
+`*sql.DB` manages a **pool of connections**, rather than a single connection. Each operation borrows a connection and returns it for reuse, reducing the need to open a new one for every query.
+
+[`2_polling_test.go`](../database/2_polling_test.go) configures both connection helpers with the same limits:
 
 ```go
-func GetConnectionsMySQL() *sql.DB {
-    db, err := sql.Open("mysql", "go:lang@tcp(localhost:3306)/test")
-    if err != nil {
-        panic(err)
-    }
+db.SetMaxIdleConns(10)
+db.SetMaxOpenConns(100)
+db.SetConnMaxIdleTime(3 * time.Minute)
+db.SetConnMaxLifetime(time.Hour)
+```
 
-    db.SetMaxIdleConns(10)                 // max idle connections kept open in the pool
-    db.SetMaxOpenConns(100)                // max concurrent open connections
-    db.SetConnMaxIdleTime(3 * time.Minute) // how long a connection may sit idle before being closed
-    db.SetConnMaxLifetime(time.Hour)       // how long a connection may live before being recycled
+| Setting | Effect |
+|---------|--------|
+| `SetMaxIdleConns(10)` | Keeps up to 10 idle connections for reuse |
+| `SetMaxOpenConns(100)` | Allows up to 100 open connections; callers wait when the pool is full |
+| `SetConnMaxIdleTime(3 * time.Minute)` | Limits how long connections remain idle |
+| `SetConnMaxLifetime(time.Hour)` | Limits how long connections can be reused |
 
-    return db
+`TestConnectionsMySQL` and `TestConnectionsPostgres` each call `Ping()` 100 times through one pool.
+
+> **Note:** These loop examples ignore `Ping()` errors, so their printed success messages do not prove connectivity. Use the connection tests above to check it.
+
+## Inserting Data with `ExecContext`
+
+[`3_exec_test.go`](../database/3_exec_test.go) inserts into `customer`. Create the table once in `test` using the matching SQL below; the Go file's SQL comment is not executed by the tests.
+
+MySQL:
+
+```sql
+CREATE TABLE customer (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL
+);
+```
+
+PostgreSQL:
+
+```sql
+CREATE TABLE customer (
+    id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name VARCHAR(100) NOT NULL
+);
+```
+
+Both schemas generate `id` automatically and require a non-null `name`.
+
+```go
+db := GetConnectionsMySQL()
+defer db.Close()
+
+ctx := context.Background()
+_, err := db.ExecContext(ctx, "INSERT INTO customer (name) VALUES (?)", "John Doe")
+if err != nil {
+    t.Fatal("Error inserting into MySQL:", err)
 }
 ```
 
-| Method | Default | What it controls |
-|--------|---------|------------------|
-| `SetMaxIdleConns(n)` | `2` | Max connections held in the idle pool (0 = no idle conns, `-1` = unlimited) |
-| `SetMaxOpenConns(n)` | unlimited | Max connections open at once (0 = unlimited). When full, new requests **wait** |
-| `SetConnMaxIdleTime(d)` | unlimited | Idle connections are closed after `d` — frees resources during quiet periods |
-| `SetConnMaxLifetime(d)` | unlimited | Connections are recycled after `d` — good for avoiding stale connections / DB restarts |
+`ExecContext` runs statements such as `INSERT`, `UPDATE`, or `DELETE` without returning rows. It returns `sql.Result` and `error`; `_` discards the result here, while `t.Fatal` stops the test if the insert fails.
 
-> **Why pool settings matter:** opening a fresh connection per query is expensive. The pool reuses idle connections (`SetMaxIdleConns`) up to a cap (`SetMaxOpenConns`), and `SetConnMaxLifetime` prevents long-lived connections from going stale (e.g. after the server restarts).
+`context.Background()` has no timeout; see [Context](15-context.md) for cancellation and deadlines.
 
----
+| DBMS | Placeholder | Value inserted by the test |
+|------|-------------|----------------------------|
+| MySQL | `?` | `John Doe` |
+| PostgreSQL | `$1` | `Jane Doe` |
 
-## The polling test pattern
+Placeholders mark where query arguments belong. Their syntax follows the database and driver; `database/sql` does not translate between `?` and `$1`.
 
-`database/2_polling_test.go` opens one pool and fires **100 pings** through it — demonstrating that `database/sql` reuses pooled connections instead of reconnecting each time. There's a MySQL and a Postgres variant; the MySQL one is shown here:
+MySQL assigns each `?` an argument from left to right. PostgreSQL uses numbered positions: `$1` refers to the first argument, `$2` to the second. Both examples below set customer `1`'s name to `Budi`:
 
 ```go
-func TestConnectionsMySQL(t *testing.T) {
-    db := GetConnectionsMySQL()
-    defer db.Close()
+// MySQL
+_, err := db.ExecContext(ctx, "UPDATE customer SET name = ? WHERE id = ?", "Budi", 1)
 
-    for i := 1; i <= 100; i++ {
-        db.Ping()
-        fmt.Println("Success ")
-    }
-}
+// PostgreSQL (alternative)
+_, err := db.ExecContext(ctx, "UPDATE customer SET name = $1 WHERE id = $2", "Budi", 1)
 ```
 
----
+> **Note:** In `VALUES (?)` or `VALUES ($1)`, the parentheses belong to SQL's `VALUES` syntax. The placeholder itself is just `?` or `$1`. Pass values as separate arguments rather than concatenating them into SQL.
 
-## Related docs
+### Run and Verify
 
-- [`docs/0-database-setup.md`](0-database-setup.md) — creating databases & tables from the CLI (MySQL & PostgreSQL), service management
-- [`docs/0-init.md`](0-init.md) — `go mod` commands for adding driver dependencies
+From the project root:
+
+```bash
+go test ./database -v -count=1 -run '^TestExecMySQL$'
+go test ./database -v -count=1 -run '^TestExecPostgres$'
+```
+
+`-run` selects the test; `-count=1` bypasses cached results. In DBeaver or the database CLI, query the matching `test` database:
+
+```sql
+SELECT id, name FROM customer ORDER BY id;
+```
+
+> **Note:** Each successful run adds one row and leaves it in the database. Duplicate names are allowed. The server must be running, and the Go account needs `INSERT` permission on `customer`.
+
+## References
+
+- [Go `database/sql` API](https://pkg.go.dev/database/sql)
+- [Executing SQL statements in Go](https://go.dev/doc/database/change-data)
+- [Database setup](0-database-setup.md)
+- [Module and dependency commands](0-init.md)
