@@ -16,7 +16,7 @@ Go learning examples with notes covering fundamentals, standard library packages
 | [`test/`](test/) | Unit tests, subtests, table-driven tests, benchmarks, assertions, and mocks |
 | [`concurrency/`](concurrency/) | Goroutines, channels, timers, synchronization, and Go scheduler examples |
 | [`context/`](context/) | Context values, cancellation, timeouts, and deadlines |
-| [`database/`](database/) | MySQL and PostgreSQL connections, pooling, and inserts |
+| [`database/`](database/) | MySQL and PostgreSQL connections, pooling, inserts, and queries |
 | [`docs/`](docs/) | English notes explaining the examples |
 
 ### Running Examples
@@ -69,7 +69,7 @@ Follow the numbered topics in order, or open the note matching the example you a
 | 13. Synchronization | [Race conditions, mutexes, and deadlocks](docs/13-concurrency-synchronization.md) |
 | 14. Synchronization utilities | [Once, Pool, Cond, and atomic operations](docs/14-synchronization-utils.md) |
 | 15. Context | [Values, cancellation, and deadlines](docs/15-context.md) |
-| 16. Database | [Connections, pooling, and ExecContext](docs/16-database.md) |
+| 16. Database | [Connections, pooling, ExecContext, and QueryContext](docs/16-database.md) |
 
 ### Setup and References
 

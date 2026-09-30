@@ -1,6 +1,6 @@
 ## Go Database (`database/sql`)
 
-Connections, pooling, and inserts using the examples in [`database/`](../database/).
+Connections, pooling, inserts, and queries using the examples in [`database/`](../database/).
 
 ## How It Works
 
@@ -156,9 +156,86 @@ SELECT id, name FROM customer ORDER BY id;
 
 > **Note:** Each successful run adds one row and leaves it in the database. Duplicate names are allowed. The server must be running, and the Go account needs `INSERT` permission on `customer`.
 
+## Querying Rows with `QueryContext`
+
+[`4_query_test.go`](../database/4_query_test.go) reads the `customer` table with a `SELECT`:
+
+```go
+db := GetConnectionsMySQL()
+defer db.Close()
+
+ctx := context.Background()
+script := "SELECT id, name FROM customer"
+
+rows, err := db.QueryContext(ctx, script)
+if err != nil {
+    panic(err)
+}
+
+for rows.Next() {
+    var id, name string
+    if err := rows.Scan(&id, &name); err != nil {
+        t.Fatal("Error scanning row:", err)
+    }
+    fmt.Println("id ", id)
+    fmt.Println("name ", name)
+}
+
+if err := rows.Err(); err != nil {
+    t.Fatal("Error iterating rows:", err)
+}
+
+defer rows.Close()
+```
+
+`TestQueryPostgres` runs the same code through `GetConnectionsPostgres()`. The query has no arguments, so the identical SQL works for both DBMS and needs no placeholders.
+
+| Call | Purpose |
+|------|---------|
+| `db.QueryContext(ctx, script)` | Runs a `SELECT` and returns `*sql.Rows` |
+| `rows.Next()` | Advances to the next row; returns `false` at the end **or** on an error |
+| `rows.Scan(&id, &name)` | Copies the current row's columns into the variables, left to right |
+| `rows.Err()` | Reports the error that stopped iteration, if any |
+| `rows.Close()` | Releases `rows` and returns its connection to the pool |
+
+Where `ExecContext` runs statements without rows and returns `sql.Result`, `QueryContext` returns `*sql.Rows`, a cursor over the result set. A query error is reported by the `err` from `QueryContext` itself, which the tests pass to `panic`.
+
+### Checking `rows.Err()` After the Loop
+
+`rows.Next()` returns `false` both when every row has been read and when iteration stopped early on an error. Only `rows.Err()` tells the two cases apart:
+
+```go
+for rows.Next() {
+    // ...
+}
+if err := rows.Err(); err != nil {
+    t.Fatal("Error iterating rows:", err)
+}
+```
+
+> **Note:** Skipping `rows.Err()` can hide a mid-iteration failure such as a dropped connection; the loop would simply end early, as if the table were shorter.
+
+The `Scan` destinations decide the Go types. Both `id` and `name` scan into `string` here: the driver converts each column's value to fit the destination, so the integer `id` prints as text. A destination that cannot hold a column's value makes `Scan` return an error.
+
+> **Note:** In the tests, `defer rows.Close()` sits after the loop; deferring it immediately after `QueryContext` succeeds is the usual habit so every path releases the connection. `rows` keeps its connection checked out of the pool until `Close` is called.
+
+> **Note:** The tests read whatever `customer` contains at the time. The insert tests above are an easy way to add rows first.
+
+### Run and Verify
+
+From the project root:
+
+```bash
+go test ./database -v -count=1 -run '^TestQueryMySQL$'
+go test ./database -v -count=1 -run '^TestQueryPostgres$'
+```
+
+`-v` shows the `id` and `name` lines printed by the loop. The server must be running, and the Go account needs `SELECT` permission on `customer`.
+
 ## References
 
 - [Go `database/sql` API](https://pkg.go.dev/database/sql)
 - [Executing SQL statements in Go](https://go.dev/doc/database/change-data)
+- [Querying data in Go](https://go.dev/doc/database/querying)
 - [Database setup](0-database-setup.md)
 - [Module and dependency commands](0-init.md)
