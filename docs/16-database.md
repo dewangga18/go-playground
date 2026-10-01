@@ -232,9 +232,159 @@ go test ./database -v -count=1 -run '^TestQueryPostgres$'
 
 `-v` shows the `id` and `name` lines printed by the loop. The server must be running, and the Go account needs `SELECT` permission on `customer`.
 
+## Automatic Time Parsing and NULL Columns
+
+[`5_auto_parse_time_test.go`](../database/5_auto_parse_time_test.go) works with a new `orders` table in `test` that adds a nullable `updated_at` column beside a required `created_at`:
+
+| Column | MySQL | PostgreSQL |
+|--------|-------|------------|
+| `created_at` | `TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP` | same |
+| `updated_at` | `TIMESTAMP NULL DEFAULT NULL` | same |
+
+Both tests create the table with `CREATE TABLE IF NOT EXISTS`, so no manual setup is needed.
+
+### Own Connection Pools
+
+The file defines its own helpers, `GetConnectionsMySQLParseTime()` and `GetConnectionsPostgresParseTime()`, separate from the pools in `2_polling_test.go`:
+
+```go
+// MySQL: parseTime=true makes the driver return time.Time
+db, err := sql.Open("mysql", "go:lang@tcp(localhost:3306)/test?parseTime=true")
+
+// PostgreSQL: lib/pq parses timestamps into time.Time on its own
+db, err := sql.Open("postgres", "postgres://go:lang@localhost:5432/test?sslmode=disable")
+```
+
+| DBMS | Extra DSN parameter | Effect |
+|------|---------------------|--------|
+| MySQL | `parseTime=true` | `DATETIME`/`TIMESTAMP` columns scan into `time.Time` instead of `[]byte` |
+| PostgreSQL | none | `lib/pq` already decodes `timestamp` columns into `time.Time` |
+
+> **Note:** MySQL converts `time.Time` arguments and results with the DSN's `loc` setting, which defaults to `UTC`. Add `&loc=Local` to keep your machine's wall time. PostgreSQL `timestamp` (without time zone) stores the wall time as written, and `lib/pq` labels the scanned value `UTC`.
+
+### Scanning a Nullable Time Column
+
+A plain `time.Time` destination fails when the value is `NULL`. `sql.NullTime` wraps a `time.Time` with a `Valid` flag instead:
+
+```go
+var updatedAt sql.NullTime // NULL becomes Valid=false, not an error
+if err := rows.Scan(&id, &name, &createdAt, &updatedAt); err != nil {
+    t.Fatal("Error scanning row:", err)
+}
+
+updated := "NULL"
+if updatedAt.Valid {
+    updated = updatedAt.Time.Format("2006-01-02 15:04:05 MST")
+}
+```
+
+`Valid == false` means the column was `NULL`; reading `.Time` without checking `Valid` gives the zero time.
+
+### All `sql.Null...` Types
+
+Every nullable SQL type has a matching wrapper. Each struct holds the value plus a `Valid bool`:
+
+| Type | Wrapped Go type | Typical SQL columns |
+|------|-----------------|---------------------|
+| `sql.NullString` | `string` | `VARCHAR`, `CHAR`, `TEXT` |
+| `sql.NullBool` | `bool` | `BOOLEAN`, `TINYINT(1)` |
+| `sql.NullInt16` | `int16` | `SMALLINT` |
+| `sql.NullInt32` | `int32` | `INT`, `integer` |
+| `sql.NullInt64` | `int64` | `BIGINT`, `SERIAL`, `BIGSERIAL` |
+| `sql.NullByte` | `byte` (`uint8`) | `TINYINT UNSIGNED` |
+| `sql.NullFloat64` | `float64` | `DOUBLE`, `REAL`, `DECIMAL` |
+| `sql.NullTime` | `time.Time` | `TIMESTAMP`, `DATETIME`, `DATE` |
+
+There is also a generic form that covers the same cases with one name. It stores the value in `V` instead of a type-specific field (`String`, `Int64`, `Time`, ...):
+
+```go
+var name sql.Null[string]
+if err := rows.Scan(&name); err != nil {
+    t.Fatal("Error scanning row:", err)
+}
+if name.Valid {
+    fmt.Println(name.V)
+} else {
+    fmt.Println("name is NULL")
+}
+```
+
+`T` should be one of the types accepted by `driver.Value`.
+
+> **Note:** All of these implement `driver.Valuer`, so they can be passed as query arguments — that is what the `sql.NullTime{}` insert above relies on.
+
+`sql.NullTime` also works as a query argument. Its `Value()` method returns `nil` when `Valid` is `false`, so the driver writes `NULL`:
+
+```go
+script := "INSERT INTO orders (name, created_at, updated_at) VALUES (?, ?, ?)"
+_, err := db.ExecContext(ctx, script, "Keyboard", time.Now(), sql.NullTime{})
+```
+
+Each test run inserts two rows — one with a `NULL` `updated_at` and one with a real time — then prints both states.
+
+### Converting to Plain Go Types
+
+Each wrapper documents its own conversion in its doc comment on pkg.go.dev ([`NullString`](https://pkg.go.dev/database/sql#NullString), [`NullTime`](https://pkg.go.dev/database/sql#NullTime), and so on): the pattern is always `if x.Valid { use x.<Field> }`. There is no `ToString()`-style method — conversion means reading the value field yourself:
+
+| From | Value field | Fallback when `NULL` |
+|------|-------------|----------------------|
+| `sql.NullString` | `.String` | `""` |
+| `sql.NullBool` | `.Bool` | `false` |
+| `sql.NullInt16` | `.Int16` | `0` |
+| `sql.NullInt32` | `.Int32` | `0` |
+| `sql.NullInt64` | `.Int64` | `0` |
+| `sql.NullByte` | `.Byte` | `0` |
+| `sql.NullFloat64` | `.Float64` | `0` |
+| `sql.NullTime` | `.Time` | `time.Time{}` (January 1, year 1) |
+| `sql.Null[T]` | `.V` | zero value of `T` |
+
+Because every wrapper has the same shape (value field + `Valid`), the generic form converts through one small helper:
+
+```go
+func orZero[T any](v sql.Null[T]) T {
+    if v.Valid {
+        return v.V
+    }
+    var zero T
+    return zero
+}
+
+name := orZero(stringName) // sql.Null[string] -> string
+```
+
+For a `time.Time` specifically, prefer an explicit fallback over the zero value:
+
+```go
+value := time.Unix(0, 0)
+if updatedAt.Valid {
+    value = updatedAt.Time
+}
+```
+
+> **Note:** Scanning `NULL` into a plain non-pointer type fails with an error such as `converting NULL to string is unsupported`. A pointer destination is the other NULL-aware option: with `var name *string`, `rows.Scan(&name)` sets `name` to `nil` for `NULL` and to a filled `*string` otherwise. `sql.Null...` stays the idiomatic choice because `Valid` makes the check explicit at the call site.
+
+### Run and Verify
+
+From the project root:
+
+```bash
+go test ./database -v -count=1 -run '^TestAutoParseTimeMySQL$'
+go test ./database -v -count=1 -run '^TestAutoParseTimePostgres$'
+```
+
+Each successful run adds two rows to `orders`. In DBeaver or the database CLI:
+
+```sql
+SELECT id, name, created_at, updated_at FROM orders ORDER BY id;
+```
+
+> **Note:** The server must be running, and the Go account needs `CREATE`, `INSERT`, and `SELECT` permission on `test`.
+
 ## References
 
 - [Go `database/sql` API](https://pkg.go.dev/database/sql)
+- [`sql.Null...` types on pkg.go.dev](https://pkg.go.dev/database/sql#NullString)
+- [`Scanner` interface](https://pkg.go.dev/database/sql#Scanner) and [`driver.Valuer` interface](https://pkg.go.dev/database/sql/driver#Valuer)
 - [Executing SQL statements in Go](https://go.dev/doc/database/change-data)
 - [Querying data in Go](https://go.dev/doc/database/querying)
 - [Database setup](0-database-setup.md)
