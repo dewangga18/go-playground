@@ -3,13 +3,13 @@ package test
 import "testing"
 
 func BenchmarkSquare(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		Square(10)
 	}
 }
 
 func BenchmarkSquareSub(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		b.Run("Square 5", func(b *testing.B) {
 			Square(5)
 		})

@@ -35,7 +35,8 @@ func TestQueryMySQL(t *testing.T) {
     defer rows.Close()
 }
 
-func TestQueryPostgres(t *testing.T) {    // connection from 2_polling_test.go
+func TestQueryPostgres(t *testing.T) {    
+	// connection from 2_polling_test.go
     db := GetConnectionsPostgres()
 	defer db.Close()
 
