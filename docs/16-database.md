@@ -380,9 +380,95 @@ SELECT id, name, created_at, updated_at FROM orders ORDER BY id;
 
 > **Note:** The server must be running, and the Go account needs `CREATE`, `INSERT`, and `SELECT` permission on `test`.
 
+## Safe from SQL Injection — Login Edge Case
+
+[`6_safe_from_injection_test.go`](../database/6_safe_from_injection_test.go) authenticates against a new `users` table in `test` and demonstrates the classic login bypass. The tests create and seed the table themselves (`alice` / `bob`); the plaintext passwords exist only to keep the demo readable.
+
+| Column | MySQL | PostgreSQL |
+|--------|-------|------------|
+| `id` | `INT AUTO_INCREMENT PRIMARY KEY` | `INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY` |
+| `username` | `VARCHAR(50) NOT NULL UNIQUE` | same |
+| `password` | `VARCHAR(100) NOT NULL` | same |
+
+### Two Ways to Build a Query
+
+The safe path fixes the SQL text as a constant and passes the credentials as arguments:
+
+```go
+const loginMySQL = "SELECT id, username FROM users WHERE username = ? AND password = ?"
+rows, err := db.QueryContext(ctx, loginMySQL, username, password)
+```
+
+The unsafe path pastes the values into the SQL text:
+
+```go
+script := "SELECT id, username FROM users WHERE username = '" + username +
+    "' AND password = '" + password + "'"
+rows, err := db.QueryContext(ctx, script)
+```
+
+| | Safe (parameterized) | Unsafe (concatenation) |
+|---|---------------------|------------------------|
+| SQL text | fixed in code | built from input |
+| Where values live | bound `?` / `$1` placeholders | spliced into the text |
+| Payload `' OR 1=1 -- ` | a literal username, no match | syntax that neutralizes the password check |
+| Result in the tests | `blocked` | `logged in as "alice"` |
+
+### Why Placeholders Hold
+
+A placeholder is resolved before the data arrives: the driver sends the statement and the values as separate pieces, so the server never re-reads a value as SQL. The structure of the query is decided by code alone.
+
+Concatenation does the opposite — the server receives one text blob and parses it from scratch. Inside that blob the payload closes the username quote, adds an always-true condition, and comments out the rest:
+
+```sql
+WHERE username = '' OR 1=1 -- ' AND password = '...'
+```
+
+> **Note:** The trailing space in `' OR 1=1 -- ` matters: MySQL requires whitespace after `--` before a comment counts.
+
+### The Four Test Steps
+
+Each test runs the same ladder on its DBMS:
+
+| Step | Action | Expected |
+|------|--------|----------|
+| 1 | `LoginMySQL(ctx, db, "alice", "wonderland")` | logs in |
+| 2 | wrong password | refused |
+| 3 | payload through the placeholders | refused — treated as a literal username |
+| 4 | payload through `LoginUnsafe` (concatenation) | bypassed — logs in as `alice` |
+
+`LoginMySQL`, `LoginPostgres`, and `LoginUnsafe` all share `searchAccount`, which reads a single row: `rows.Next()` is called once inside an `if`, never a `for` loop.
+
+### Rules to Keep Queries Safe
+
+1. **SQL text belongs to the code; input belongs in values.** Any `+ variable +` inside a query string is a red flag.
+2. **Parameterization beats escaping or blacklists.** Filtering quotes or blocking `OR` is easy to bypass (case, encodings, other characters); a placeholder does not care what the value contains.
+3. **Placeholders work only where a *value* goes.** Table and column names, `ORDER BY`, and `LIMIT` cannot be bound — whitelist those in code.
+4. **Injection is not only about logging in.** A payload in a search column can change query logic as well.
+
+> **Note:** Real code stores password hashes (bcrypt, argon2), never plaintext. See the [OWASP SQL Injection Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html).
+
+### Run and Verify
+
+From the project root:
+
+```bash
+go test ./database -v -count=1 -run '^TestSafeFromInjectionMySQL$'
+go test ./database -v -count=1 -run '^TestSafeFromInjectionPostgres$'
+```
+
+Each run prints one line comparing both paths:
+
+```text
+payload "' OR 1=1 -- " -> parameterized: blocked | concatenated: logged in as "alice"
+```
+
+> **Note:** Step 4 runs a deliberately vulnerable `SELECT` as a read-only demonstration. Never ship `LoginUnsafe`.
+
 ## References
 
 - [Go `database/sql` API](https://pkg.go.dev/database/sql)
+- [OWASP SQL Injection Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html)
 - [`sql.Null...` types on pkg.go.dev](https://pkg.go.dev/database/sql#NullString)
 - [`Scanner` interface](https://pkg.go.dev/database/sql#Scanner) and [`driver.Valuer` interface](https://pkg.go.dev/database/sql/driver#Valuer)
 - [Executing SQL statements in Go](https://go.dev/doc/database/change-data)
